@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* --- Base & Layout Styles --- */
         * {
             margin: 0;
             padding: 0;
@@ -18,506 +17,1148 @@
 
         body {
             font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            background-color: #141414;
             color: #fff;
             min-height: 100vh;
             overflow-x: hidden;
-            /* Larger base font for TV viewing distance */
-            font-size: 18px; 
+            position: relative;
         }
 
-        main {
-            padding: 30px 40px;
+        /* TV App Container */
+        .tv-app-container {
+            width: 100%;
+            min-height: 100vh;
+            padding: 40px 60px;
+            position: relative;
+        }
+
+        /* Category Navigation */
+        .category-nav {
             display: flex;
-            flex-direction: column;
-            gap: 40px; /* Increased gap for TV */
+            gap: 30px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            scrollbar-width: none;
         }
 
-        /* --- Component Styles --- */
-        .section-title {
-            font-size: 28px; /* Larger title */
-            font-weight: 700;
+        .category-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-item {
+            color: #e5e5e5;
+            font-size: 18px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .category-item:hover {
+            color: #fff;
+        }
+
+        .category-item.active {
+            color: #e50914;
+        }
+
+        .category-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e50914;
+            border-radius: 2px;
+        }
+
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 50px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 15px;
-            padding: 5px;
-            /* Make title focusable for D-pad navigation */
-            outline: none; 
-        }
-        
-        .section-title:focus {
-            outline: 2px solid #ff0066;
-            outline-offset: 5px;
-            border-radius: 8px;
+            gap: 10px;
         }
 
         .section-title i {
-            color: #ff0066;
-            font-size: 32px;
+            color: #e50914;
+            font-size: 20px;
         }
 
+        .see-all {
+            color: #e5e5e5;
+            font-size: 16px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .see-all:hover {
+            color: #e50914;
+        }
+
+        /* Channel Grid */
         .channels-grid {
             display: grid;
-            /* Larger grid for TV */
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 30px; /* Increased gap */
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            position: relative;
         }
 
+        /* Channel Card with Preview */
         .channel-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            position: relative;
+            background-color: #181818;
+            border-radius: 8px;
             overflow: hidden;
-            transition: all 0.3s ease;
             cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            flex-direction: column;
-            /* Larger card height for TV */
-            height: 240px;
-            text-decoration: none;
-            color: inherit;
-            position: relative;
+            transition: all 0.3s ease;
+            aspect-ratio: 16/9;
         }
 
-        /* --- TV D-Pad Focus Styles (Most Important) --- */
-        .channel-card:focus {
-            outline: none;
-            transform: translateY(-10px) scale(1.05);
-            box-shadow: 0 0 0 4px #ff0066, 0 20px 40px rgba(138, 56, 236, 0.4);
-            border-color: #ff0066;
+        .channel-card:hover {
+            transform: scale(1.05);
             z-index: 10;
+            box-shadow: 0 0 30px rgba(229, 9, 20, 0.5);
         }
 
-        /* Visible focus indicator for D-pad */
-        .channel-card:focus::after {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            border: 3px solid #ff0066;
-            border-radius: 20px;
-            pointer-events: none;
-            z-index: 11;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 0, 102, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 0, 102, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 0, 102, 0); }
-        }
-
-        .channel-logo {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .channel-logo::before {
-            content: '';
+        .channel-preview {
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 0, 102, 0.2), rgba(131, 56, 236, 0.2));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        /* Activate gradient on focus/hover */
-        .channel-card:focus .channel-logo::before,
-        .channel-card:hover .channel-logo::before {
-            opacity: 1;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2a2a2a, #181818);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        .channel-logo i {
-            font-size: 60px; /* Larger icon */
-            color: #fff;
+        .channel-preview iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+            pointer-events: none;
+        }
+
+        .channel-card:hover .channel-preview iframe {
+            display: block;
+        }
+
+        .channel-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: rgba(255, 255, 255, 0.8);
+            transition: opacity 0.3s ease;
             z-index: 1;
         }
 
+        .channel-card:hover .channel-logo {
+            opacity: 0.3;
+        }
+
+        /* Loading indicator for iframe */
+        .preview-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 2;
+        }
+
+        .channel-card:hover .preview-loading {
+            display: block;
+        }
+
+        .preview-loading i {
+            font-size: 32px;
+            color: #e50914;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Channel Info Overlay */
         .channel-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
             padding: 15px;
-            background: rgba(0, 0, 0, 0.3);
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 3;
+        }
+
+        .channel-card:hover .channel-info {
+            transform: translateY(0);
         }
 
         .channel-name {
             font-weight: 700;
-            font-size: 22px; /* Larger text */
-            margin-bottom: 5px;
+            font-size: 18px;
+            margin-bottom: 8px;
         }
-        
-        /* Add a checkmark on focus */
-        .channel-card:focus .channel-name::after {
-            content: ' ✓';
-            color: #ffd700;
+
+        .channel-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 14px;
+            color: #e5e5e5;
         }
 
         .channel-status {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 16px; /* Larger text */
-            color: rgba(255, 255, 255, 0.7);
+            gap: 5px;
         }
 
         .status-dot {
-            width: 10px; /* Larger dot */
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: #4caf50;
-            animation: blink 2s infinite;
+            background: #46d369;
+            animation: pulse 2s infinite;
         }
 
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
+        @keyframes pulse {
+            0% { opacity: 1; }
             50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
-        /* --- Modal Styles --- */
-        .modal {
-            display: none;
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(229, 9, 20, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+            z-index: 4;
+        }
+
+        .channel-card:hover .play-button {
+            opacity: 1;
+        }
+
+        .play-button i {
+            font-size: 24px;
+            color: white;
+            margin-left: 3px;
+        }
+
+        /* Side Menu (Hidden by default) */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100vh;
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            transition: left 0.3s ease;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .side-menu.active {
+            left: 0;
+        }
+
+        .menu-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(229, 9, 20, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .menu-toggle i {
+            color: white;
+            font-size: 18px;
+        }
+
+        .menu-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .menu-logo {
+            width: 50px;
+            height: 50px;
+            background: #e50914;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .menu-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #e50914;
+        }
+
+        .menu-section {
+            margin-bottom: 30px;
+        }
+
+        .menu-section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #777;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 0;
+            color: #e5e5e5;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .menu-item:hover {
+            color: #e50914;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Preview Modal */
+        .preview-modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 1000;
-            justify-content: center;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
             align-items: center;
+            justify-content: center;
         }
 
-        .modal-content {
-            background: linear-gradient(135deg, #1e1e32, #2a2a4e);
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 800px;
+        .preview-modal.active {
+            display: flex;
+        }
+
+        .preview-modal-content {
             width: 90%;
-            max-height: 80%;
-            overflow: auto;
-            border: 2px solid rgba(255, 0, 102, 0.5);
-            box-shadow: 0 0 40px rgba(138, 56, 236, 0.6);
-            text-align: center;
+            height: 90%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
         }
 
-        .modal-close {
+        .preview-modal iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .preview-modal-close {
             position: absolute;
             top: 20px;
-            right: 30px;
-            font-size: 40px;
-            color: #fff;
-            cursor: pointer;
-            background: rgba(255, 0, 102, 0.8);
-            width: 50px;
-            height: 50px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(229, 9, 20, 0.9);
             border-radius: 50%;
             display: flex;
-            justify-content: center;
             align-items: center;
-            transition: transform 0.2s;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2001;
         }
 
-        .modal-close:focus {
-            outline: 3px solid #fff;
-            transform: scale(1.1);
-        }
-        
-        /* --- Loading State --- */
-        .channel-card.loading .channel-logo::after {
-            content: '';
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.2);
-            border-top: 5px solid #ff0066;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2;
+        .preview-modal-close i {
+            color: white;
+            font-size: 18px;
         }
 
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .channels-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            }
         }
 
-        /* --- Responsive Design --- */
         @media (max-width: 768px) {
-            main { padding: 20px; }
-            .channels-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-            .channel-card { height: 180px; }
-            .channel-logo i { font-size: 40px; }
-            .channel-name { font-size: 18px; }
+            .tv-app-container {
+                padding: 20px;
+            }
+
+            .channels-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 15px;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
+            .channel-name {
+                font-size: 16px;
+            }
         }
 
-        /* TV-specific large screen adjustments */
-        @media (min-width: 1200px) {
-            .channels-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-            .channel-card { height: 280px; }
+        @media (max-width: 480px) {
+            .channels-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .channel-logo {
+                font-size: 36px;
+            }
+        }
+
+        /* TV-specific optimizations */
+        @media (min-width: 1920px) {
+            .tv-app-container {
+                padding: 60px 80px;
+            }
+
+            .channels-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 30px;
+            }
+
+            .section-title {
+                font-size: 26px;
+            }
+
+            .channel-logo {
+                font-size: 56px;
+            }
+        }
+
+        /* Focus styles for TV navigation */
+        .channel-card:focus,
+        .menu-item:focus,
+        .category-item:focus {
+            outline: 2px solid #e50914;
+            outline-offset: 2px;
         }
     </style>
 </head>
 <body>
+    <!-- Side Menu -->
+    <div class="side-menu" id="sideMenu">
+        <div class="menu-header">
+            <div class="menu-logo">P</div>
+            <div class="menu-title">PROSTREAM-TV</div>
+        </div>
+        
+        <div class="menu-section">
+            <div class="menu-section-title">Browse</div>
+            <div class="menu-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-tv"></i>
+                <span>Sports</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-film"></i>
+                <span>Entertainment</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-child"></i>
+                <span>Kids</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-newspaper"></i>
+                <span>News</span>
+            </div>
+        </div>
+        
+        <div class="menu-section">
+            <div class="menu-section-title">Settings</div>
+            <div class="menu-item">
+                <i class="fas fa-user"></i>
+                <span>Account</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-cog"></i>
+                <span>Preferences</span>
+            </div>
+            <div class="menu-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sign Out</span>
+            </div>
+        </div>
+    </div>
 
-    <main>
-        <section>
-            <h2 class="section-title" tabindex="0" role="heading" aria-level="2"><i class="fas fa-tv"></i> Sports Channels</h2>
-            <div class="channels-grid" role="group" aria-label="Sports Channels">
-                <a href="epl1.html" class="channel-card" tabindex="0" aria-label="EPL 1, Live">
-                    <div class="channel-logo"><i class="fas fa-futbol"></i></div>
+    <!-- Menu Toggle Button -->
+    <div class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-modal-content">
+            <iframe id="modalIframe" src=""></iframe>
+            <div class="preview-modal-close" id="previewModalClose">
+                <i class="fas fa-times"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main TV App Container -->
+    <div class="tv-app-container">
+        <!-- Category Navigation -->
+        <div class="category-nav">
+            <div class="category-item active">All</div>
+            <div class="category-item">Sports</div>
+            <div class="category-item">Entertainment</div>
+            <div class="category-item">Kids</div>
+            <div class="category-item">News</div>
+            <div class="category-item">Movies</div>
+            <div class="category-item">Series</div>
+        </div>
+
+        <!-- Sports Channels Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-tv"></i> Sports Channels</h2>
+                <div class="see-all">See All →</div>
+            </div>
+            <div class="channels-grid">
+                <a href="epl1.html" class="channel-card" data-preview="epl1.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="epl1.html" loading="lazy"></iframe>
+                        <i class="fas fa-futbol channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">EPL 1</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="epl2.html" class="channel-card" tabindex="0" aria-label="EPL 2, Live">
-                    <div class="channel-logo"><i class="fas fa-futbol"></i></div>
+
+                <a href="epl2.html" class="channel-card" data-preview="epl2.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="epl2.html" loading="lazy"></iframe>
+                        <i class="fas fa-futbol channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">EPL 2</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="arenabola.html" class="channel-card" tabindex="0" aria-label="Arena Bola 1, Live">
-                    <div class="channel-logo"><i class="fas fa-basketball-ball"></i></div>
+                
+                <a href="arenabola.html" class="channel-card" data-preview="arenabola.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="arenabola.html" loading="lazy"></iframe>
+                        <i class="fas fa-basketball-ball channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">ARENA BOLA 1</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="arenabola2.html" class="channel-card" tabindex="0" aria-label="Arena Bola 2, Live">
-                    <div class="channel-logo"><i class="fas fa-basketball-ball"></i></div>
+
+                <a href="arenabola2.html" class="channel-card" data-preview="arenabola2.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="arenabola2.html" loading="lazy"></iframe>
+                        <i class="fas fa-basketball-ball channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">ARENA BOLA 2</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="badminton.html" class="channel-card" tabindex="0" aria-label="Badminton, Live">
-                    <div class="channel-logo"><i class="fa-solid fa-person-running"></i></div>
+
+                <a href="badminton.html" class="channel-card" data-preview="badminton.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="badminton.html" loading="lazy"></iframe>
+                        <i class="fa-solid fa-person-running channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">Badminton</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="sukanrtm.html" class="channel-card" tabindex="0" aria-label="Sukan RTM, Live">
-                    <div class="channel-logo"><i class="fas fa-football-ball"></i></div>
+                
+                <a href="sukanrtm.html" class="channel-card" data-preview="sukanrtm.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="sukanrtm.html" loading="lazy"></iframe>
+                        <i class="fas fa-football-ball channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">Sukan RTM</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
                     </div>
-                </a>
-                <!-- Add other channels with href="#" as placeholders -->
-                <a href="#" class="channel-card" tabindex="0" aria-label="MLB, Live">
-                    <div class="channel-logo"><i class="fas fa-baseball-ball"></i></div>
-                    <div class="channel-info">
-                        <div class="channel-name">MLB</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
             </div>
-        </section>
+        </div>
 
-        <section>
-            <h2 class="section-title" tabindex="0" role="heading" aria-level="2"><i class="fas fa-film"></i> Entertainment</h2>
-            <div class="channels-grid" role="group" aria-label="Entertainment Channels">
-                <a href="ria.html" class="channel-card" tabindex="0" aria-label="RIA, Live">
-                    <div class="channel-logo"><i class="fas fa-video"></i></div>
+        <!-- Entertainment Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-film"></i> Entertainment</h2>
+                <div class="see-all">See All →</div>
+            </div>
+            <div class="channels-grid">
+                <a href="ria.html" class="channel-card" data-preview="ria.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="ria.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">RIA</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="prima.html" class="channel-card" tabindex="0" aria-label="PRIMA, Live">
-                    <div class="channel-logo"><i class="fas fa-video"></i></div>
+
+                <a href="prima.html" class="channel-card" data-preview="prima.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="prima.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">PRIMA</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="tv3.html" class="channel-card" tabindex="0" aria-label="TV3, Live">
-                    <div class="channel-logo"><i class="fas fa-video"></i></div>
+
+                <a href="tv3.html" class="channel-card" data-preview="tv3.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="tv3.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">TV3</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="tv9.html" class="channel-card" tabindex="0" aria-label="TV9, Live">
-                    <div class="channel-logo"><i class="fas fa-video"></i></div>
+
+                <a href="tv9.html" class="channel-card" data-preview="tv9.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="tv9.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">TV9</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
                     </div>
-                </a>
-                <a href="tv1.html" class="channel-card" tabindex="0" aria-label="TV1, Live">
-                    <div class="channel-logo"><i class="fas fa-video"></i></div>
-                    <div class="channel-info">
-                        <div class="channel-name">TV1</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
-                    </div>
-                </a>
-                <a href="#" class="channel-card" tabindex="0" aria-label="Kids, Live">
-                    <div class="channel-logo"><i class="fas fa-child"></i></div>
-                    <div class="channel-info">
-                        <div class="channel-name">Kids</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
-                    </div>
-                </a>
-                <a href="#" class="channel-card" tabindex="0" aria-label="Music, Live">
-                    <div class="channel-logo"><i class="fas fa-music"></i></div>
-                    <div class="channel-info">
-                        <div class="channel-name">Music</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
             </div>
-        </section>
-        
-        <!-- Add other sections (Kids + Movies, News) here following the same pattern -->
-        <section>
-            <h2 class="section-title" tabindex="0" role="heading" aria-level="2"><i class="fas fa-newspaper"></i> News</h2>
-            <div class="channels-grid" role="group" aria-label="News Channels">
-                <a href="awani.html" class="channel-card" tabindex="0" aria-label="AWANI, Live">
-                    <div class="channel-logo"><i class="fas fa-video"></i></div>
+        </div>
+
+        <!-- Kids + Movies Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-child"></i> Kids + Movies</h2>
+                <div class="see-all">See All →</div>
+            </div>
+            <div class="channels-grid">
+                <a href="ceria.html" class="channel-card" data-preview="ceria.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="ceria.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
+                    <div class="channel-info">
+                        <div class="channel-name">CERIA</div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </a>
+
+                <a href="nicklodeon.html" class="channel-card" data-preview="nicklodeon.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="nicklodeon.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
+                    <div class="channel-info">
+                        <div class="channel-name">Nicklodeon</div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </a>
+
+                <a href="cn.html" class="channel-card" data-preview="cn.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="cn.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
+                    <div class="channel-info">
+                        <div class="channel-name">Cartoon Network</div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- News Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-newspaper"></i> News</h2>
+                <div class="see-all">See All →</div>
+            </div>
+            <div class="channels-grid">
+                <a href="awani.html" class="channel-card" data-preview="awani.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="awani.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">AWANI</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
-                <a href="bernama.html" class="channel-card" tabindex="0" aria-label="BERNAMA, Live">
-                    <div class="channel-logo"><i class="fas fa-video"></i></div>
+
+                <a href="bernama.html" class="channel-card" data-preview="bernama.html" tabindex="0">
+                    <div class="channel-preview">
+                        <iframe src="bernama.html" loading="lazy"></iframe>
+                        <i class="fas fa-video channel-logo"></i>
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                    </div>
                     <div class="channel-info">
                         <div class="channel-name">BERNAMA</div>
-                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
+                        <div class="channel-meta">
+                            <div class="channel-status">
+                                <div class="status-dot"></div>
+                                <span>Live</span>
+                            </div>
+                            <span>HD</span>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
                     </div>
                 </a>
             </div>
-        </section>
-    </main>
-
-    <!-- Channel Preview Modal -->
-    <div id="channelModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-content">
-            <span id="modalClose" class="modal-close" tabindex="0" role="button" aria-label="Close modal">&times;</span>
-            <h2 id="modalTitle">Channel Information</h2>
-            <p>Press and hold OK/Enter to watch this channel.</p>
-            <p>Press Back or the close button to cancel.</p>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const channelCards = document.querySelectorAll('.channel-card');
-            const modal = document.getElementById('channelModal');
-            const modalClose = document.getElementById('modalClose');
-            const modalTitle = document.getElementById('modalTitle');
-            let lastFocusedElement = null;
-            let pressTimer;
+        // Menu Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const sideMenu = document.getElementById('sideMenu');
+        
+        menuToggle.addEventListener('click', function() {
+            sideMenu.classList.toggle('active');
+        });
 
-            // Set initial focus on the first channel for immediate D-pad control
-            if (channelCards.length > 0) {
-                channelCards[0].focus();
-            }
+        // Category Navigation
+        const categoryItems = document.querySelectorAll('.category-item');
+        categoryItems.forEach(item => {
+            item.addEventListener('click', function() {
+                categoryItems.forEach(cat => cat.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
 
-            // --- D-Pad Navigation Logic ---
-            document.addEventListener('keydown', function(e) {
-                const focusedElement = document.activeElement;
+        // Preview Modal
+        const previewModal = document.getElementById('previewModal');
+        const modalIframe = document.getElementById('modalIframe');
+        const previewModalClose = document.getElementById('previewModalClose');
+        const channelCards = document.querySelectorAll('.channel-card');
+
+        // Store active iframes to manage playback
+        let activeIframes = new Set();
+
+        // Function to pause video in iframe
+        function pauseVideoInIframe(iframe) {
+            try {
+                // Try to access the video element in the iframe
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const video = iframeDoc.querySelector('video');
+                if (video) {
+                    video.pause();
+                }
                 
-                // Navigate between sections with Up/Down arrows when a channel is focused
-                if (focusedElement.classList.contains('channel-card')) {
-                    const currentSection = focusedElement.closest('section');
-                    const allSections = Array.from(document.querySelectorAll('section'));
-                    const sectionIndex = allSections.indexOf(currentSection);
-                    
-                    if (e.key === 'ArrowUp' && sectionIndex > 0) {
-                        e.preventDefault();
-                        const prevSection = allSections[sectionIndex - 1];
-                        const firstCardInPrevSection = prevSection.querySelector('.channel-card');
-                        if (firstCardInPrevSection) {
-                            firstCardInPrevSection.focus();
-                        }
-                    } else if (e.key === 'ArrowDown' && sectionIndex < allSections.length - 1) {
-                        e.preventDefault();
-                        const nextSection = allSections[sectionIndex + 1];
-                        const firstCardInNextSection = nextSection.querySelector('.channel-card');
-                        if (firstCardInNextSection) {
-                            firstCardInNextSection.focus();
-                        }
-                    }
+                // Also try to pause Shaka Player if present
+                const shakaPlayer = iframe.contentWindow.player;
+                if (shakaPlayer) {
+                    shakaPlayer.pause();
                 }
-            });
-
-            // --- Smooth Scrolling & Modal Logic for Channel Cards ---
-            channelCards.forEach(card => {
-                card.addEventListener('focus', function() {
-                    // Smoothly scroll the focused card into the center of the view
-                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                });
-
-                // Long-press logic for the modal
-                card.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault(); // Prevent default link navigation
-                        lastFocusedElement = this; // Remember which card opened the modal
-                        const channelName = this.querySelector('.channel-name').textContent;
-                        modalTitle.textContent = channelName + ' - Preview';
-                        
-                        pressTimer = setTimeout(() => {
-                            modal.style.display = 'flex';
-                            modalClose.focus(); // Move focus into the modal
-                        }, 800); // Show modal after 800ms of holding Enter
-                    }
-                });
-
-                card.addEventListener('keyup', function(e) {
-                    if (e.key === 'Enter') {
-                        clearTimeout(pressTimer); // Cancel the long-press timer
-                        // If the modal is not visible, it was a short press, so navigate
-                        if (modal.style.display !== 'flex') {
-                            window.location.href = this.getAttribute('href');
-                        }
-                    }
-                });
-            });
-
-            // --- Modal Closing Logic ---
-            function closeModal() {
-                modal.style.display = 'none';
-                if (lastFocusedElement) {
-                    lastFocusedElement.focus(); // Return focus to the channel card
-                }
+            } catch (e) {
+                // Cross-origin restrictions prevent access to iframe content
+                // We can't directly control the video, but we can reload the iframe
+                iframe.src = iframe.src;
             }
+        }
 
-            modalClose.addEventListener('click', closeModal);
-            modalClose.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    closeModal();
+        // Handle channel card hover events
+        channelCards.forEach(card => {
+            const iframe = card.querySelector('iframe');
+            const playButton = card.querySelector('.play-button');
+            const previewUrl = card.getAttribute('data-preview');
+            
+            // Mouse enter - start preview
+            card.addEventListener('mouseenter', function() {
+                // Pause all other active iframes
+                activeIframes.forEach(iframe => {
+                    if (iframe !== this.querySelector('iframe')) {
+                        pauseVideoInIframe(iframe);
+                    }
+                });
+                
+                // Clear the set and add this iframe
+                activeIframes.clear();
+                activeIframes.add(iframe);
+                
+                // Make sure iframe is visible
+                iframe.style.display = 'block';
+            });
+            
+            // Mouse leave - pause preview
+            card.addEventListener('mouseleave', function() {
+                pauseVideoInIframe(iframe);
+                activeIframes.delete(iframe);
+            });
+            
+            // Play button click - open in modal
+            playButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                modalIframe.src = previewUrl;
+                previewModal.classList.add('active');
+            });
+            
+            // Card click - navigate to page
+            card.addEventListener('click', function(e) {
+                if (!e.target.closest('.play-button')) {
+                    window.location.href = card.getAttribute('href');
                 }
             });
+        });
 
-            // Close modal with the Escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && modal.style.display === 'flex') {
-                    closeModal();
+        // Close modal
+        previewModalClose.addEventListener('click', function() {
+            previewModal.classList.remove('active');
+            modalIframe.src = '';
+        });
+
+        // Close modal when clicking outside
+        previewModal.addEventListener('click', function(e) {
+            if (e.target === previewModal) {
+                previewModal.classList.remove('active');
+                modalIframe.src = '';
+            }
+        });
+
+        // Keyboard Navigation for TV
+        let currentFocusIndex = 0;
+        const focusableElements = document.querySelectorAll('.channel-card, .category-item, .menu-item');
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') {
+                currentFocusIndex = (currentFocusIndex + 1) % focusableElements.length;
+                focusableElements[currentFocusIndex].focus();
+            } else if (e.key === 'ArrowLeft') {
+                currentFocusIndex = (currentFocusIndex - 1 + focusableElements.length) % focusableElements.length;
+                focusableElements[currentFocusIndex].focus();
+            } else if (e.key === 'ArrowDown') {
+                // Navigate to next row
+                const currentElement = focusableElements[currentFocusIndex];
+                const nextRowElement = findNextRowElement(currentElement);
+                if (nextRowElement) {
+                    currentFocusIndex = Array.from(focusableElements).indexOf(nextRowElement);
+                    nextRowElement.focus();
+                }
+            } else if (e.key === 'ArrowUp') {
+                // Navigate to previous row
+                const currentElement = focusableElements[currentFocusIndex];
+                const prevRowElement = findPrevRowElement(currentElement);
+                if (prevRowElement) {
+                    currentFocusIndex = Array.from(focusableElements).indexOf(prevRowElement);
+                    prevRowElement.focus();
+                }
+            } else if (e.key === 'Enter') {
+                focusableElements[currentFocusIndex].click();
+            } else if (e.key === 'Escape' && previewModal.classList.contains('active')) {
+                previewModal.classList.remove('active');
+                modalIframe.src = '';
+            }
+        });
+
+        function findNextRowElement(currentElement) {
+            const currentRect = currentElement.getBoundingClientRect();
+            const currentCenterY = currentRect.top + currentRect.height / 2;
+            
+            let nextElement = null;
+            let minDistance = Infinity;
+            
+            focusableElements.forEach(element => {
+                if (element === currentElement) return;
+                
+                const rect = element.getBoundingClientRect();
+                const elementCenterY = rect.top + rect.height / 2;
+                
+                // Check if element is in the next row
+                if (elementCenterY > currentCenterY + 20) {
+                    const distance = Math.abs(elementCenterY - currentCenterY);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nextElement = element;
+                    }
                 }
             });
+            
+            return nextElement;
+        }
 
-            // --- Demo Loading State ---
-            // To demonstrate, add a loading class to a random card for 3 seconds
-            const randomCard = channelCards[Math.floor(Math.random() * channelCards.length)];
-            randomCard.classList.add('loading');
-            setTimeout(() => {
-                randomCard.classList.remove('loading');
-            }, 3000);
+        function findPrevRowElement(currentElement) {
+            const currentRect = currentElement.getBoundingClientRect();
+            const currentCenterY = currentRect.top + currentRect.height / 2;
+            
+            let prevElement = null;
+            let minDistance = Infinity;
+            
+            focusableElements.forEach(element => {
+                if (element === currentElement) return;
+                
+                const rect = element.getBoundingClientRect();
+                const elementCenterY = rect.top + rect.height / 2;
+                
+                // Check if element is in the previous row
+                if (elementCenterY < currentCenterY - 20) {
+                    const distance = Math.abs(elementCenterY - currentCenterY);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        prevElement = element;
+                    }
+                }
+            });
+            
+            return prevElement;
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!sideMenu.contains(e.target) && !menuToggle.contains(e.target)) {
+                sideMenu.classList.remove('active');
+            }
         });
     </script>
 </body>
