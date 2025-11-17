@@ -51,7 +51,7 @@
         }
 
         /* 
-         * --- NEW: Custom Watermark Styles ---
+         * --- Custom Watermark Styles ---
          * This creates the permanent, professional watermark.
         */
         #watermark {
@@ -78,13 +78,13 @@
         <video autoplay data-shaka-player id="video"></video>
         
         <!-- 
-          NEW: The watermark element.
+          The watermark element.
           It's a simple div placed inside the container.
         -->
         <div id="watermark">PROSTREAM-EPL1</div>
     </div>
 
-    <!-- Your application source (unchanged from the working version): -->
+    <!-- Your application source (with TV-optimized UI): -->
     <script>
         const manifestUri =
             'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
@@ -95,7 +95,7 @@
             const controls = ui.getControls();
             const player = controls.getPlayer();
 
-            // --- Your Custom Configuration (unchanged) ---
+            // --- Your Custom Configuration (Updated for TV) ---
 
             player.configure({
                 drm: {
@@ -105,9 +105,37 @@
                 }
             });
 
+            // --- UPDATED: Smart TV UI Configuration ---
+            // This setup is optimized for navigation with a remote control.
             ui.configure({
-                controlPanelElements: ['play_pause', 'time_and_duration', 'spacer', 'mute', 'volume', 'fullscreen', 'overflow_menu'],
-                overflowMenuButtons: ['captions', 'quality', 'language', 'picture_in_picture', 'cast', 'playback_rate']
+                // Enables the large, centered play button for easy selection.
+                addBigPlayButton: true,
+                // Disables play/pause on single click, favoring the big button.
+                singleClickForPlayAndPause: false,
+                // Disables tooltips which are not useful for remotes.
+                enableTooltips: false,
+                // Disables double-click for fullscreen, which is hard with a remote.
+                doubleClickForFullscreen: false,
+
+                // Control panel elements suitable for a TV remote.
+                controlPanelElements: [
+                    'skip_previous',
+                    'skip_next',
+                    'time_and_duration',
+                    'spacer',
+                    'overflow_menu',
+                    'fullscreen',
+                ],
+                overflowMenuButtons: [
+                    'captions',
+                    'quality',
+                    'language',
+                    'chapter',
+                    'picture_in_picture',
+                    'playback_rate',
+                    'recenter_vr',
+                    'toggle_stereoscopic',
+                ],
             });
 
             // --- End of Custom Configuration ---
