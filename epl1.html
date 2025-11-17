@@ -52,58 +52,69 @@
 
         /* 
          * --- Custom Watermark Styles ---
-         * This creates the permanent, professional watermark.
         */
         #watermark {
             position: absolute;
-            top: 2vw; /* Responsive distance from the top */
-            left: 2vw; /* Responsive distance from the left */
-            z-index: 9999; /* Ensures it's on top of the video and controls */
-            font-family: 'Roboto', sans-serif; /* Professional font */
-            font-size: 3.5vw; /* Large, responsive font size */
-            font-weight: 700; /* Bold */
-            color: rgba(255, 255, 255, 0.6); /* Semi-transparent white */
-            pointer-events: none; /* Makes it unclickable so it doesn't interfere with the player */
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9); /* Strong shadow for readability */
-            letter-spacing: 2px; /* Adds spacing for a more professional look */
+            top: 2vw;
+            left: 2vw;
+            z-index: 9999;
+            font-family: 'Roboto', sans-serif;
+            font-size: 3.5vw;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+            letter-spacing: 2px;
         }
 
         /* 
-         * --- NEW: Remote Control Focus Highlight ---
-         * This makes the selected button obvious when navigating with a remote.
+         * --- Remote Control Focus Highlight ---
         */
         [data-shaka-player-container] *:focus {
-            outline: 2px solid #ffcc00; /* A bright, highly visible yellow outline */
-            background-color: rgba(255, 204, 0, 0.2); /* A subtle background highlight */
+            outline: 2px solid #ffcc00 !important;
+            background-color: rgba(255, 204, 0, 0.2) !important;
         }
-
-        /* Ensure buttons and other interactive elements are focusable */
-        [data-shaka-player-container] button,
-        [data-shaka-player-container] input,
-        [data-shaka-player-container] .shaka-range {
-            -webkit-appearance: none; /* Removes default styling to apply custom focus */
+        
+        /* Ensure buttons are focusable and remove default browser focus rings */
+        [data-shaka-player-container] button {
+             -webkit-appearance: none;
         }
     </style>
 </head>
 <body>
 
-    <!-- 
-      The Shaka container is the direct child of the body.
-    -->
     <div data-shaka-player-container>
-        <video autoplay data-shaka-player id="video"></video>
-        
-        <!-- 
-          The watermark element.
-          It's a simple div placed inside the container.
-        -->
+        <video data-shaka-player id="video"></video>
         <div id="watermark">PROSTREAM-EPL1</div>
     </div>
 
-    <!-- Your application source (with TV-optimized UI and autoplay): -->
     <script>
         const manifestUri =
             'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
+
+        // --- Function to fix D-pad navigation ---
+        function makeControlsFocusable() {
+            console.log('🎯 Making controls focusable for D-pad navigation...');
+            const container = document.querySelector('[data-shaka-player-container]');
+            if (!container) return;
+
+            const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
+            focusableElements.forEach(el => {
+                el.setAttribute('tabindex', '0');
+            });
+            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
+        }
+
+        // --- NEW: Function to unmute the video ---
+        function unmuteVideo() {
+            const video = document.getElementById('video');
+            if (video.muted) {
+                video.muted = false;
+                console.log('🔊 Video has been unmuted.');
+                // Remove the listener after it successfully unmutes
+                document.removeEventListener('keydown', unmuteVideo);
+            }
+        }
 
         async function init() {
             const video = document.getElementById('video');
@@ -111,7 +122,8 @@
             const controls = ui.getControls();
             const player = controls.getPlayer();
 
-            // --- Your Custom Configuration (Updated for TV) ---
+            // --- FIX: Start muted to allow autoplay, then unmute ---
+            video.muted = true;
 
             player.configure({
                 drm: {
@@ -121,20 +133,14 @@
                 }
             });
 
-            // --- UPDATED: Smart TV UI Configuration ---
-            // This setup is optimized for navigation with a remote control.
             ui.configure({
-                // Enables the large, centered play button for easy selection.
                 addBigPlayButton: true,
-                // Disables play/pause on single click, favoring the big button.
                 singleClickForPlayAndPause: false,
-                // Disables tooltips which are not useful for remotes.
                 enableTooltips: false,
-                // Disables double-click for fullscreen, which is hard with a remote.
                 doubleClickForFullscreen: false,
 
-                // Control panel elements suitable for a TV remote.
                 controlPanelElements: [
+                    'play_pause',
                     'skip_previous',
                     'skip_next',
                     'time_and_duration',
@@ -154,22 +160,24 @@
                 ],
             });
 
-            // --- End of Custom Configuration ---
-
             window.player = player;
             window.ui = ui;
 
             player.addEventListener('error', onPlayerErrorEvent);
             controls.addEventListener('error', onUIErrorEvent);
+            
+            // --- Add listener to unmute as soon as playback starts ---
+            video.addEventListener('playing', () => {
+                // A small delay to ensure the playback state is fully established
+                setTimeout(unmuteVideo, 500);
+            });
 
             try {
                 await player.load(manifestUri);
                 console.log('✅ The video has now been loaded!');
                 
-                // --- NEW: Force Autoplay ---
-                // Explicitly call play after loading to ensure it starts.
                 await player.play();
-                console.log('✅ Autoplay started!');
+                console.log('✅ Autoplay started (muted). Will unmute shortly.');
 
             } catch (error) {
                 onPlayerError(error);
@@ -181,7 +189,14 @@
         function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
         function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
 
-        document.addEventListener('shaka-ui-loaded', init);
+        document.addEventListener('shaka-ui-loaded', () => {
+            init();
+            makeControlsFocusable();
+        });
+
+        // --- NEW: Add a fallback to unmute on any remote button press ---
+        document.addEventListener('keydown', unmuteVideo);
+
         document.addEventListener('shaka-ui-load-failed', initFailed);
     </script>
 
