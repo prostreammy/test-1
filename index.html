@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* --- Base & Layout Styles --- */
         * {
             margin: 0;
             padding: 0;
@@ -21,99 +22,46 @@
             color: #fff;
             min-height: 100vh;
             overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        header {
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(45deg, #ff0066, #8338ec);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 24px;
-        }
-
-        .logo-text {
-            font-size: 28px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            background: linear-gradient(45deg, #ff0066, #8338ec);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .vip-badge {
-            background: linear-gradient(45deg, #ffd700, #ffed4e);
-            color: #000;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 14px;
-            margin-left: 10px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, #ff0066, #8338ec);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            /* Larger base font for TV viewing distance */
+            font-size: 18px; 
         }
 
         main {
-            flex: 1;
             padding: 30px 40px;
             display: flex;
             flex-direction: column;
-            gap: 30px;
+            gap: 40px; /* Increased gap for TV */
         }
 
+        /* --- Component Styles --- */
         .section-title {
-            font-size: 24px;
+            font-size: 28px; /* Larger title */
             font-weight: 700;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
+            padding: 5px;
+            /* Make title focusable for D-pad navigation */
+            outline: none; 
+        }
+        
+        .section-title:focus {
+            outline: 2px solid #ff0066;
+            outline-offset: 5px;
+            border-radius: 8px;
         }
 
         .section-title i {
             color: #ff0066;
+            font-size: 32px;
         }
 
         .channels-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 25px;
+            /* Larger grid for TV */
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 30px; /* Increased gap */
         }
 
         .channel-card {
@@ -125,13 +73,41 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
-            height: 200px;
+            /* Larger card height for TV */
+            height: 240px;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
         }
 
-        .channel-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(138, 56, 236, 0.3);
-            border-color: rgba(255, 255, 255, 0.3);
+        /* --- TV D-Pad Focus Styles (Most Important) --- */
+        .channel-card:focus {
+            outline: none;
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 0 0 4px #ff0066, 0 20px 40px rgba(138, 56, 236, 0.4);
+            border-color: #ff0066;
+            z-index: 10;
+        }
+
+        /* Visible focus indicator for D-pad */
+        .channel-card:focus::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border: 3px solid #ff0066;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 11;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 102, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 0, 102, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 102, 0); }
         }
 
         .channel-logo {
@@ -155,13 +131,15 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-
+        
+        /* Activate gradient on focus/hover */
+        .channel-card:focus .channel-logo::before,
         .channel-card:hover .channel-logo::before {
             opacity: 1;
         }
 
         .channel-logo i {
-            font-size: 48px;
+            font-size: 60px; /* Larger icon */
             color: #fff;
             z-index: 1;
         }
@@ -173,424 +151,374 @@
 
         .channel-name {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 22px; /* Larger text */
             margin-bottom: 5px;
+        }
+        
+        /* Add a checkmark on focus */
+        .channel-card:focus .channel-name::after {
+            content: ' ✓';
+            color: #ffd700;
         }
 
         .channel-status {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 14px;
+            gap: 8px;
+            font-size: 16px; /* Larger text */
             color: rgba(255, 255, 255, 0.7);
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px; /* Larger dot */
+            height: 10px;
             border-radius: 50%;
             background: #4caf50;
+            animation: blink 2s infinite;
         }
 
-        footer {
-            padding: 20px 40px;
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: space-between;
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* --- Modal Styles --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
             align-items: center;
         }
 
-        .copyright {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.5);
+        .modal-content {
+            background: linear-gradient(135deg, #1e1e32, #2a2a4e);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80%;
+            overflow: auto;
+            border: 2px solid rgba(255, 0, 102, 0.5);
+            box-shadow: 0 0 40px rgba(138, 56, 236, 0.6);
+            text-align: center;
         }
 
-        .social-links {
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: #fff;
+            cursor: pointer;
+            background: rgba(255, 0, 102, 0.8);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
             display: flex;
-            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s;
         }
 
-        .social-links a {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 18px;
-            transition: color 0.3s ease;
+        .modal-close:focus {
+            outline: 3px solid #fff;
+            transform: scale(1.1);
+        }
+        
+        /* --- Loading State --- */
+        .channel-card.loading .channel-logo::after {
+            content: '';
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.2);
+            border-top: 5px solid #ff0066;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
         }
 
-        .social-links a:hover {
-            color: #ff0066;
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
+        /* --- Responsive Design --- */
         @media (max-width: 768px) {
-            header {
-                padding: 15px 20px;
-            }
-
-            .logo-text {
-                font-size: 20px;
-            }
-
-            .vip-badge {
-                font-size: 12px;
-                padding: 4px 10px;
-            }
-
-            main {
-                padding: 20px;
-            }
-
-            .channels-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 15px;
-            }
-
-            .channel-card {
-                height: 170px;
-            }
-
-            footer {
-                padding: 15px 20px;
-                flex-direction: column;
-                gap: 10px;
-            }
+            main { padding: 20px; }
+            .channels-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+            .channel-card { height: 180px; }
+            .channel-logo i { font-size: 40px; }
+            .channel-name { font-size: 18px; }
         }
 
-        @media (orientation: landscape) {
-            body {
-                min-height: 100vh;
-            }
-            
-            .channels-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            }
+        /* TV-specific large screen adjustments */
+        @media (min-width: 1200px) {
+            .channels-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+            .channel-card { height: 280px; }
         }
     </style>
 </head>
 <body>
+
     <main>
         <section>
-            <h2 class="section-title"><i class="fas fa-tv"></i> Sports Channels</h2>
-            <div class="channels-grid">
-                <a href="epl1.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-futbol"></i>
-                    </div>
+            <h2 class="section-title" tabindex="0" role="heading" aria-level="2"><i class="fas fa-tv"></i> Sports Channels</h2>
+            <div class="channels-grid" role="group" aria-label="Sports Channels">
+                <a href="epl1.html" class="channel-card" tabindex="0" aria-label="EPL 1, Live">
+                    <div class="channel-logo"><i class="fas fa-futbol"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">EPL 1</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-
-                <a href="epl2.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-futbol"></i>
-                    </div>
+                <a href="epl2.html" class="channel-card" tabindex="0" aria-label="EPL 2, Live">
+                    <div class="channel-logo"><i class="fas fa-futbol"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">EPL 2</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-                
-                <a href="arenabola.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-basketball-ball"></i>
-                    </div>
+                <a href="arenabola.html" class="channel-card" tabindex="0" aria-label="Arena Bola 1, Live">
+                    <div class="channel-logo"><i class="fas fa-basketball-ball"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">ARENA BOLA 1</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-                <a href="arenabola2.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-basketball-ball"></i>
-                    </div>
+                <a href="arenabola2.html" class="channel-card" tabindex="0" aria-label="Arena Bola 2, Live">
+                    <div class="channel-logo"><i class="fas fa-basketball-ball"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">ARENA BOLA 2</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-
-                <a href="badminton.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fa-solid fa-person-running"></i>
-                    </div>
+                <a href="badminton.html" class="channel-card" tabindex="0" aria-label="Badminton, Live">
+                    <div class="channel-logo"><i class="fa-solid fa-person-running"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">Badminton</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-                
-                <a href="sukanrtm.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-football-ball"></i>
-                    </div>
+                <a href="sukanrtm.html" class="channel-card" tabindex="0" aria-label="Sukan RTM, Live">
+                    <div class="channel-logo"><i class="fas fa-football-ball"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">Sukan RTM</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-                
-                <a href="#" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-baseball-ball"></i>
-                    </div>
+                <!-- Add other channels with href="#" as placeholders -->
+                <a href="#" class="channel-card" tabindex="0" aria-label="MLB, Live">
+                    <div class="channel-logo"><i class="fas fa-baseball-ball"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">MLB</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
             </div>
         </section>
 
-                <section>
-            <h2 class="section-title"><i class="fas fa-film"></i> Entertainment</h2>
-            <div class="channels-grid">
-                <a href="ria.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
+        <section>
+            <h2 class="section-title" tabindex="0" role="heading" aria-level="2"><i class="fas fa-film"></i> Entertainment</h2>
+            <div class="channels-grid" role="group" aria-label="Entertainment Channels">
+                <a href="ria.html" class="channel-card" tabindex="0" aria-label="RIA, Live">
+                    <div class="channel-logo"><i class="fas fa-video"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">RIA</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-
-                <a href="prima.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
+                <a href="prima.html" class="channel-card" tabindex="0" aria-label="PRIMA, Live">
+                    <div class="channel-logo"><i class="fas fa-video"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">PRIMA</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-
-                <a href="tv3.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
+                <a href="tv3.html" class="channel-card" tabindex="0" aria-label="TV3, Live">
+                    <div class="channel-logo"><i class="fas fa-video"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">TV3</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-
-                <a href="tv9.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
+                <a href="tv9.html" class="channel-card" tabindex="0" aria-label="TV9, Live">
+                    <div class="channel-logo"><i class="fas fa-video"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">TV9</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-                
-                <a href="tv1.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
+                <a href="tv1.html" class="channel-card" tabindex="0" aria-label="TV1, Live">
+                    <div class="channel-logo"><i class="fas fa-video"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">TV1</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-                
-                <a href="#" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-child"></i>
-                    </div>
+                <a href="#" class="channel-card" tabindex="0" aria-label="Kids, Live">
+                    <div class="channel-logo"><i class="fas fa-child"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">Kids</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-                
-                <a href="#" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-music"></i>
-                    </div>
+                <a href="#" class="channel-card" tabindex="0" aria-label="Music, Live">
+                    <div class="channel-logo"><i class="fas fa-music"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">Music</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
             </div>
         </section>
-
         
+        <!-- Add other sections (Kids + Movies, News) here following the same pattern -->
         <section>
-            <h2 class="section-title"><i class="fas fa-film"></i> KIDS + MOVIES</h2>
-            <div class="channels-grid">
-                <a href="ceria.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">CERIA</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
-                    </div>
-                </a>
-
-                <a href="nicklodeon.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">Nicklodeon</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
-                    </div>
-                </a>
-
-                <a href="cn.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">Cartoon Network</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
-                    </div>
-                </a>
-
-                <a href="TV9.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">TV9</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
-                    </div>
-                </a>
-                
-                <a href="#" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-tv"></i>
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">Series</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
-                    </div>
-                </a>
-                
-                <a href="#" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-child"></i>
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">Kids</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
-                    </div>
-                </a>
-                
-                <a href="#" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-music"></i>
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">Music</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <section>
-            <h2 class="section-title"><i class="fas fa-film"></i> NEWS</h2>
-            <div class="channels-grid">
-                <a href="awani.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
+            <h2 class="section-title" tabindex="0" role="heading" aria-level="2"><i class="fas fa-newspaper"></i> News</h2>
+            <div class="channels-grid" role="group" aria-label="News Channels">
+                <a href="awani.html" class="channel-card" tabindex="0" aria-label="AWANI, Live">
+                    <div class="channel-logo"><i class="fas fa-video"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">AWANI</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
-
-                <a href="bernama.html" class="channel-card">
-                    <div class="channel-logo">
-                        <i class="fas fa-video"></i>
-                    </div>
+                <a href="bernama.html" class="channel-card" tabindex="0" aria-label="BERNAMA, Live">
+                    <div class="channel-logo"><i class="fas fa-video"></i></div>
                     <div class="channel-info">
                         <div class="channel-name">BERNAMA</div>
-                        <div class="channel-status">
-                            <div class="status-dot"></div>
-                            <span>Live</span>
-                        </div>
+                        <div class="channel-status"><div class="status-dot"></div><span>Live</span></div>
                     </div>
                 </a>
             </div>
         </section>
-
-
-        
-
     </main>
+
+    <!-- Channel Preview Modal -->
+    <div id="channelModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-content">
+            <span id="modalClose" class="modal-close" tabindex="0" role="button" aria-label="Close modal">&times;</span>
+            <h2 id="modalTitle">Channel Information</h2>
+            <p>Press and hold OK/Enter to watch this channel.</p>
+            <p>Press Back or the close button to cancel.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const channelCards = document.querySelectorAll('.channel-card');
+            const modal = document.getElementById('channelModal');
+            const modalClose = document.getElementById('modalClose');
+            const modalTitle = document.getElementById('modalTitle');
+            let lastFocusedElement = null;
+            let pressTimer;
+
+            // Set initial focus on the first channel for immediate D-pad control
+            if (channelCards.length > 0) {
+                channelCards[0].focus();
+            }
+
+            // --- D-Pad Navigation Logic ---
+            document.addEventListener('keydown', function(e) {
+                const focusedElement = document.activeElement;
+                
+                // Navigate between sections with Up/Down arrows when a channel is focused
+                if (focusedElement.classList.contains('channel-card')) {
+                    const currentSection = focusedElement.closest('section');
+                    const allSections = Array.from(document.querySelectorAll('section'));
+                    const sectionIndex = allSections.indexOf(currentSection);
+                    
+                    if (e.key === 'ArrowUp' && sectionIndex > 0) {
+                        e.preventDefault();
+                        const prevSection = allSections[sectionIndex - 1];
+                        const firstCardInPrevSection = prevSection.querySelector('.channel-card');
+                        if (firstCardInPrevSection) {
+                            firstCardInPrevSection.focus();
+                        }
+                    } else if (e.key === 'ArrowDown' && sectionIndex < allSections.length - 1) {
+                        e.preventDefault();
+                        const nextSection = allSections[sectionIndex + 1];
+                        const firstCardInNextSection = nextSection.querySelector('.channel-card');
+                        if (firstCardInNextSection) {
+                            firstCardInNextSection.focus();
+                        }
+                    }
+                }
+            });
+
+            // --- Smooth Scrolling & Modal Logic for Channel Cards ---
+            channelCards.forEach(card => {
+                card.addEventListener('focus', function() {
+                    // Smoothly scroll the focused card into the center of the view
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+
+                // Long-press logic for the modal
+                card.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); // Prevent default link navigation
+                        lastFocusedElement = this; // Remember which card opened the modal
+                        const channelName = this.querySelector('.channel-name').textContent;
+                        modalTitle.textContent = channelName + ' - Preview';
+                        
+                        pressTimer = setTimeout(() => {
+                            modal.style.display = 'flex';
+                            modalClose.focus(); // Move focus into the modal
+                        }, 800); // Show modal after 800ms of holding Enter
+                    }
+                });
+
+                card.addEventListener('keyup', function(e) {
+                    if (e.key === 'Enter') {
+                        clearTimeout(pressTimer); // Cancel the long-press timer
+                        // If the modal is not visible, it was a short press, so navigate
+                        if (modal.style.display !== 'flex') {
+                            window.location.href = this.getAttribute('href');
+                        }
+                    }
+                });
+            });
+
+            // --- Modal Closing Logic ---
+            function closeModal() {
+                modal.style.display = 'none';
+                if (lastFocusedElement) {
+                    lastFocusedElement.focus(); // Return focus to the channel card
+                }
+            }
+
+            modalClose.addEventListener('click', closeModal);
+            modalClose.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    closeModal();
+                }
+            });
+
+            // Close modal with the Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.style.display === 'flex') {
+                    closeModal();
+                }
+            });
+
+            // --- Demo Loading State ---
+            // To demonstrate, add a loading class to a random card for 3 seconds
+            const randomCard = channelCards[Math.floor(Math.random() * channelCards.length)];
+            randomCard.classList.add('loading');
+            setTimeout(() => {
+                randomCard.classList.remove('loading');
+            }, 3000);
+        });
+    </script>
 </body>
 </html>
