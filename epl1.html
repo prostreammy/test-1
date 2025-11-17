@@ -65,35 +65,42 @@
         }
 
         /* 
-         * --- NEW: Style for our custom Live Button ---
+         * --- UPDATED: Robust Live Button Styling ---
         */
         .live-button {
-            background-color: rgba(255, 0, 0, 0.7) !important;
+            display: inline-block;
+            background-color: rgba(255, 0, 0, 0.8) !important;
             color: white !important;
             font-weight: bold !important;
             font-size: 10px !important;
-            padding: 2px 5px !important;
-            border-radius: 3px !important;
-            margin-left: 5px !important;
+            padding: 3px 6px !important;
+            border-radius: 4px !important;
+            margin-left: 8px !important;
+            vertical-align: middle !important;
             text-transform: uppercase !important;
+            border: none !important;
+            cursor: pointer !important;
         }
 
         /* 
-         * --- UPDATED: Aggressive Caption Styling ---
-         * This uses a more specific selector to override other styles.
+         * --- UPDATED: Strict 2-Line Caption Styling ---
         */
         [data-shaka-player-container] .shaka-text-container {
-            /* Position from the top to avoid conflicts */
             position: absolute !important;
-            top: 85% !important; /* Positions it 15% from the bottom */
+            top: 85% !important; /* Position from top */
             left: 50% !important;
             transform: translateX(-50%) !important;
             width: 70% !important;
-            max-width: 70% !important;
             text-align: center !important;
             padding: 0 !important;
             box-sizing: border-box !important;
-            z-index: 10 !important; /* Ensure it's above the video */
+            z-index: 10 !important;
+
+            /* --- KEY: Clamp to 2 lines --- */
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
         }
 
         [data-shaka-player-container] .shaka-text-container span {
@@ -118,13 +125,16 @@
         const manifestUri =
             'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
 
-        // --- NEW: Function to add the custom Live button ---
+        // --- UPDATED: More robust function to add the Live button ---
         function addLiveButton() {
-            const controlsContainer = document.querySelector('.shaka-controls-container');
-            const playPauseContainer = document.querySelector('.shaka-play-pause-container');
-            
-            if (!controlsContainer || !playPauseContainer) {
-                console.error('Could not find containers to add live button.');
+            // Find the container for all bottom controls
+            const bottomControls = document.querySelector('.shaka-bottom-controls');
+            // Find the play/pause button within that container
+            const playPauseButton = bottomControls ? bottomControls.querySelector('.shaka-play-pause-button') : null;
+
+            if (!bottomControls || !playPauseButton) {
+                // Retry after a short delay if the UI isn't ready yet
+                setTimeout(addLiveButton, 500);
                 return;
             }
 
@@ -140,9 +150,9 @@
                 }
             });
 
-            // Insert the live button right after the play/pause container
-            playPauseContainer.parentNode.insertBefore(liveButton, playPauseContainer.nextSibling);
-            console.log('✅ Live button added.');
+            // Insert the live button right after the play/pause button
+            playPauseButton.parentNode.insertBefore(liveButton, playPauseButton.nextSibling);
+            console.log('✅ Live button added successfully.');
         }
 
         function makeControlsFocusable() {
@@ -259,7 +269,7 @@
         document.addEventListener('shaka-ui-loaded', () => {
             init();
             makeControlsFocusable();
-            addLiveButton(); // Call our new function to add the button
+            addLiveButton(); // Call function to add the button
         });
 
         document.addEventListener('keydown', unmuteVideo);
