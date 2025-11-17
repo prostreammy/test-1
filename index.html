@@ -32,7 +32,7 @@
             position: relative;
         }
 
-        /* Category Navigation */
+        /* Category Navigation - Visual Only */
         .category-nav {
             display: flex;
             gap: 30px;
@@ -51,7 +51,6 @@
             font-size: 18px;
             font-weight: 500;
             white-space: nowrap;
-            cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
         }
@@ -584,7 +583,7 @@
 
     <!-- Main TV App Container -->
     <div class="tv-app-container">
-        <!-- Category Navigation -->
+        <!-- Category Navigation - Visual Only -->
         <div class="category-nav">
             <div class="category-item active">All</div>
             <div class="category-item">Sports</div>
@@ -1001,15 +1000,6 @@
             sideMenu.classList.toggle('active');
         });
 
-        // Category Navigation
-        const categoryItems = document.querySelectorAll('.category-item');
-        categoryItems.forEach(item => {
-            item.addEventListener('click', function() {
-                categoryItems.forEach(cat => cat.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-
         // Preview Modal
         const previewModal = document.getElementById('previewModal');
         const modalIframe = document.getElementById('modalIframe');
@@ -1020,6 +1010,29 @@
         let currentPreviewTimer = null;
         let currentPreviewCard = null;
         const PREVIEW_DURATION = 10000; // 10 seconds in milliseconds
+
+        // Store focus index for TV navigation
+        let currentFocusIndex = 0;
+        const focusableElements = document.querySelectorAll('.channel-card, .menu-item');
+
+        // Initialize focus on page load
+        window.addEventListener('load', function() {
+            // Set focus to first channel card on page load
+            if (focusableElements.length > 0) {
+                focusableElements[0].focus();
+                currentFocusIndex = 0;
+            }
+        });
+
+        // Handle visibility change (when returning from channel page)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Page is visible again, restore focus
+                if (focusableElements.length > 0 && currentFocusIndex >= 0 && currentFocusIndex < focusableElements.length) {
+                    focusableElements[currentFocusIndex].focus();
+                }
+            }
+        });
 
         // Handle channel card hover events
         channelCards.forEach(card => {
@@ -1043,10 +1056,37 @@
                 // Set current preview card
                 currentPreviewCard = card;
                 
-                // Load the iframe content
+                // Load iframe content
                 iframe.src = iframe.getAttribute('data-src');
                 
-                // Start the countdown timer
+                // Wait for iframe to load, then try to play video
+                iframe.onload = function() {
+                    try {
+                        // Try to access the video element in the iframe and play it
+                        setTimeout(() => {
+                            try {
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                const video = iframeDoc.querySelector('video');
+                                if (video && video.paused) {
+                                    video.play().catch(e => console.log('Autoplay prevented:', e));
+                                }
+                                
+                                // Also try to play Shaka Player if present
+                                const shakaPlayer = iframe.contentWindow.player;
+                                if (shakaPlayer) {
+                                    shakaPlayer.play().catch(e => console.log('Shaka autoplay prevented:', e));
+                                }
+                            } catch (e) {
+                                // Cross-origin restrictions prevent access to iframe content
+                                console.log('Cannot access iframe content due to cross-origin restrictions');
+                            }
+                        }, 1000); // Give it a second to initialize
+                    } catch (e) {
+                        console.log('Error loading iframe:', e);
+                    }
+                };
+                
+                // Start countdown timer
                 let timeLeft = 10;
                 timerElement.textContent = `${timeLeft}s`;
                 
@@ -1090,7 +1130,7 @@
             
             // Clear the timer
             if (currentPreviewTimer) {
-                clearTimeout(currentPreviewTimer);
+                clearInterval(currentPreviewTimer);
                 currentPreviewTimer = null;
             }
             
@@ -1121,37 +1161,69 @@
         });
 
         // Keyboard Navigation for TV
-        let currentFocusIndex = 0;
-        const focusableElements = document.querySelectorAll('.channel-card, .category-item, .menu-item');
-        
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight') {
-                currentFocusIndex = (currentFocusIndex + 1) % focusableElements.length;
-                focusableElements[currentFocusIndex].focus();
-            } else if (e.key === 'ArrowLeft') {
-                currentFocusIndex = (currentFocusIndex - 1 + focusableElements.length) % focusableElements.length;
-                focusableElements[currentFocusIndex].focus();
-            } else if (e.key === 'ArrowDown') {
-                // Navigate to next row
-                const currentElement = focusableElements[currentFocusIndex];
-                const nextRowElement = findNextRowElement(currentElement);
-                if (nextRowElement) {
-                    currentFocusIndex = Array.from(focusableElements).indexOf(nextRowElement);
-                    nextRowElement.focus();
+            // Don't handle navigation if modal is open
+            if (previewModal.classList.contains('active')) {
+                if (e.key === 'Escape') {
+                    previewModal.classList.remove('active');
+                    modalIframe.src = '';
                 }
-            } else if (e.key === 'ArrowUp') {
-                // Navigate to previous row
-                const currentElement = focusableElements[currentFocusIndex];
-                const prevRowElement = findPrevRowElement(currentElement);
-                if (prevRowElement) {
-                    currentFocusIndex = Array.from(focusableElements).indexOf(prevRowElement);
-                    prevRowElement.focus();
+                return;
+            }
+            
+            // Don't handle navigation if side menu is open
+            if (sideMenu.classList.contains('active')) {
+                if (e.key === 'Escape') {
+                    sideMenu.classList.remove('active');
                 }
-            } else if (e.key === 'Enter') {
-                focusableElements[currentFocusIndex].click();
-            } else if (e.key === 'Escape' && previewModal.classList.contains('active')) {
-                previewModal.classList.remove('active');
-                modalIframe.src = '';
+                return;
+            }
+            
+            switch(e.key) {
+                case 'ArrowRight':
+                    e.preventDefault();
+                    currentFocusIndex = (currentFocusIndex + 1) % focusableElements.length;
+                    focusableElements[currentFocusIndex].focus();
+                    break;
+                    
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    currentFocusIndex = (currentFocusIndex - 1 + focusableElements.length) % focusableElements.length;
+                    focusableElements[currentFocusIndex].focus();
+                    break;
+                    
+                case 'ArrowDown':
+                    e.preventDefault();
+                    const nextRowElement = findNextRowElement(focusableElements[currentFocusIndex]);
+                    if (nextRowElement) {
+                        currentFocusIndex = Array.from(focusableElements).indexOf(nextRowElement);
+                        nextRowElement.focus();
+                    }
+                    break;
+                    
+                case 'ArrowUp':
+                    e.preventDefault();
+                    const prevRowElement = findPrevRowElement(focusableElements[currentFocusIndex]);
+                    if (prevRowElement) {
+                        currentFocusIndex = Array.from(focusableElements).indexOf(prevRowElement);
+                        prevRowElement.focus();
+                    }
+                    break;
+                    
+                case 'Enter':
+                    e.preventDefault();
+                    focusableElements[currentFocusIndex].click();
+                    break;
+                    
+                case 'Escape':
+                    // Close any open overlays
+                    if (previewModal.classList.contains('active')) {
+                        previewModal.classList.remove('active');
+                        modalIframe.src = '';
+                    } else if (sideMenu.classList.contains('active')) {
+                        sideMenu.classList.remove('active');
+                    }
+                    break;
             }
         });
 
