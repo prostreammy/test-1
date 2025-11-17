@@ -105,7 +105,7 @@
             console.log(`✅ Made ${focusableElements.length} elements focusable.`);
         }
 
-        // --- NEW: Function to unmute the video ---
+        // --- Function to unmute the video ---
         function unmuteVideo() {
             const video = document.getElementById('video');
             if (video.muted) {
@@ -133,18 +133,22 @@
                 }
             });
 
+            // --- UPDATED: UI Configuration with Seek Bar Disabled ---
             ui.configure({
+                // --- KEY CHANGE: Disable the seek bar ---
+                addSeekBar: false,
+
                 addBigPlayButton: true,
                 singleClickForPlayAndPause: false,
                 enableTooltips: false,
                 doubleClickForFullscreen: false,
 
+                // Control panel elements, updated to remove time display
                 controlPanelElements: [
                     'play_pause',
                     'skip_previous',
                     'skip_next',
-                    'time_and_duration',
-                    'spacer',
+                    'spacer', // This will now push the overflow menu to the right
                     'overflow_menu',
                     'fullscreen',
                 ],
@@ -194,7 +198,7 @@
             makeControlsFocusable();
         });
 
-        // --- NEW: Add a fallback to unmute on any remote button press ---
+        // --- Add a fallback to unmute on any remote button press ---
         document.addEventListener('keydown', unmuteVideo);
 
         document.addEventListener('shaka-ui-load-failed', initFailed);
