@@ -67,6 +67,22 @@
             text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9); /* Strong shadow for readability */
             letter-spacing: 2px; /* Adds spacing for a more professional look */
         }
+
+        /* 
+         * --- NEW: Remote Control Focus Highlight ---
+         * This makes the selected button obvious when navigating with a remote.
+        */
+        [data-shaka-player-container] *:focus {
+            outline: 2px solid #ffcc00; /* A bright, highly visible yellow outline */
+            background-color: rgba(255, 204, 0, 0.2); /* A subtle background highlight */
+        }
+
+        /* Ensure buttons and other interactive elements are focusable */
+        [data-shaka-player-container] button,
+        [data-shaka-player-container] input,
+        [data-shaka-player-container] .shaka-range {
+            -webkit-appearance: none; /* Removes default styling to apply custom focus */
+        }
     </style>
 </head>
 <body>
@@ -84,7 +100,7 @@
         <div id="watermark">PROSTREAM-EPL1</div>
     </div>
 
-    <!-- Your application source (with TV-optimized UI): -->
+    <!-- Your application source (with TV-optimized UI and autoplay): -->
     <script>
         const manifestUri =
             'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
@@ -149,6 +165,12 @@
             try {
                 await player.load(manifestUri);
                 console.log('✅ The video has now been loaded!');
+                
+                // --- NEW: Force Autoplay ---
+                // Explicitly call play after loading to ensure it starts.
+                await player.play();
+                console.log('✅ Autoplay started!');
+
             } catch (error) {
                 onPlayerError(error);
             }
