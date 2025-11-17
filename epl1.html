@@ -65,29 +65,11 @@
         }
 
         /* 
-         * --- UPDATED: Robust Live Button Styling ---
-        */
-        .live-button {
-            display: inline-block;
-            background-color: rgba(255, 0, 0, 0.8) !important;
-            color: white !important;
-            font-weight: bold !important;
-            font-size: 10px !important;
-            padding: 3px 6px !important;
-            border-radius: 4px !important;
-            margin-left: 8px !important;
-            vertical-align: middle !important;
-            text-transform: uppercase !important;
-            border: none !important;
-            cursor: pointer !important;
-        }
-
-        /* 
-         * --- UPDATED: Strict 2-Line Caption Styling ---
+         * --- Caption Styling ---
         */
         [data-shaka-player-container] .shaka-text-container {
             position: absolute !important;
-            top: 85% !important; /* Position from top */
+            top: 85% !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
             width: 70% !important;
@@ -96,7 +78,7 @@
             box-sizing: border-box !important;
             z-index: 10 !important;
 
-            /* --- KEY: Clamp to 2 lines --- */
+            /* Clamp to 2 lines */
             display: -webkit-box !important;
             -webkit-line-clamp: 2 !important;
             -webkit-box-orient: vertical !important;
@@ -124,36 +106,6 @@
     <script>
         const manifestUri =
             'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
-
-        // --- UPDATED: More robust function to add the Live button ---
-        function addLiveButton() {
-            // Find the container for all bottom controls
-            const bottomControls = document.querySelector('.shaka-bottom-controls');
-            // Find the play/pause button within that container
-            const playPauseButton = bottomControls ? bottomControls.querySelector('.shaka-play-pause-button') : null;
-
-            if (!bottomControls || !playPauseButton) {
-                // Retry after a short delay if the UI isn't ready yet
-                setTimeout(addLiveButton, 500);
-                return;
-            }
-
-            const liveButton = document.createElement('button');
-            liveButton.className = 'live-button shaka-no-propagation';
-            liveButton.textContent = 'LIVE';
-            liveButton.setAttribute('tabindex', '0');
-
-            liveButton.addEventListener('click', () => {
-                if (window.player) {
-                    console.log('🔴 Live button clicked, seeking to live edge.');
-                    window.player.seekToLiveEdge();
-                }
-            });
-
-            // Insert the live button right after the play/pause button
-            playPauseButton.parentNode.insertBefore(liveButton, playPauseButton.nextSibling);
-            console.log('✅ Live button added successfully.');
-        }
 
         function makeControlsFocusable() {
             console.log('🎯 Making controls focusable for D-pad navigation...');
@@ -191,7 +143,18 @@
 
             video.muted = true;
 
+            // --- UPDATED: Configure for Low Latency to improve caption sync ---
             player.configure({
+                streaming: {
+                    lowLatencyMode: true,
+                    // A small delay makes the stream more resilient to network issues
+                    // while still being close to live.
+                    manifest: {
+                        presentationTimelineDelay: 5,
+                    },
+                    // Prevents building a large buffer that can cause sync issues.
+                    bufferBehind: 10,
+                },
                 drm: {
                     clearKeys: {
                         '002046c9a49b9ab1cdb6616bec5d26c3': 'd2f92f6b7edc9a1a05d393ba0c20ef9e'
@@ -269,7 +232,6 @@
         document.addEventListener('shaka-ui-loaded', () => {
             init();
             makeControlsFocusable();
-            addLiveButton(); // Call function to add the button
         });
 
         document.addEventListener('keydown', unmuteVideo);
