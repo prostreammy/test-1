@@ -454,7 +454,8 @@
 
         /* Focus styles for TV navigation */
         .channel-card:focus,
-        .menu-item:focus {
+        .menu-item:focus,
+        .menu-toggle:focus {
             outline: 2px solid #e50914;
             outline-offset: 2px;
         }
@@ -470,23 +471,23 @@
         
         <div class="menu-section">
             <div class="menu-section-title">Browse</div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="home">
                 <i class="fas fa-home"></i>
                 <span>Home</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="sports">
                 <i class="fas fa-tv"></i>
                 <span>Sports</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="entertainment">
                 <i class="fas fa-film"></i>
                 <span>Entertainment</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="kids">
                 <i class="fas fa-child"></i>
                 <span>Kids</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="news">
                 <i class="fas fa-newspaper"></i>
                 <span>News</span>
             </div>
@@ -494,15 +495,15 @@
         
         <div class="menu-section">
             <div class="menu-section-title">Settings</div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="account">
                 <i class="fas fa-user"></i>
                 <span>Account</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="preferences">
                 <i class="fas fa-cog"></i>
                 <span>Preferences</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" data-action="signout">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Sign Out</span>
             </div>
@@ -510,7 +511,7 @@
     </div>
 
     <!-- Menu Toggle Button -->
-    <div class="menu-toggle" id="menuToggle">
+    <div class="menu-toggle" id="menuToggle" tabindex="0">
         <i class="fas fa-bars"></i>
     </div>
 
@@ -527,7 +528,7 @@
     <!-- Main TV App Container -->
     <div class="tv-app-container">
         <!-- Sports Channels Section -->
-        <div class="content-section">
+        <div class="content-section" data-section="sports">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-tv"></i> Sports Channels</h2>
             </div>
@@ -679,7 +680,7 @@
         </div>
 
         <!-- Entertainment Section -->
-        <div class="content-section">
+        <div class="content-section" data-section="entertainment">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-film"></i> Entertainment</h2>
             </div>
@@ -783,7 +784,7 @@
         </div>
 
         <!-- Kids + Movies Section -->
-        <div class="content-section">
+        <div class="content-section" data-section="kids">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-child"></i> Kids + Movies</h2>
             </div>
@@ -863,7 +864,7 @@
         </div>
 
         <!-- News Section -->
-        <div class="content-section">
+        <div class="content-section" data-section="news">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-newspaper"></i> News</h2>
             </div>
@@ -920,50 +921,177 @@
     </div>
 
     <script>
-        // Menu Toggle
+        // Navigation state management
+        const navigationState = {
+            context: 'main', // 'main' or 'menu'
+            currentSection: 0,
+            currentChannel: 0,
+            currentMenuItem: 0,
+            sections: [],
+            channels: [],
+            menuItems: []
+        };
+
+        // Initialize navigation elements
         const menuToggle = document.getElementById('menuToggle');
         const sideMenu = document.getElementById('sideMenu');
-        
-        menuToggle.addEventListener('click', function() {
-            sideMenu.classList.toggle('active');
-        });
-
-        // Preview Modal
         const previewModal = document.getElementById('previewModal');
         const modalIframe = document.getElementById('modalIframe');
         const previewModalClose = document.getElementById('previewModalClose');
         const channelCards = document.querySelectorAll('.channel-card');
         const menuItems = document.querySelectorAll('.menu-item');
+        const contentSections = document.querySelectorAll('.content-section');
 
         // Preview timer management
         let currentPreviewTimer = null;
         let currentPreviewCard = null;
         const PREVIEW_DURATION = 10000; // 10 seconds in milliseconds
 
-        // Store focus index for TV navigation
-        let currentFocusIndex = 0;
+        // Initialize navigation data
+        function initializeNavigation() {
+            // Store sections and their channels
+            contentSections.forEach((section, sectionIndex) => {
+                const sectionChannels = section.querySelectorAll('.channel-card');
+                navigationState.sections.push({
+                    element: section,
+                    channels: Array.from(sectionChannels),
+                    index: sectionIndex
+                });
+            });
 
-        // Function to get all focusable elements
-        function getFocusableElements() {
-            return Array.from(document.querySelectorAll('.channel-card, .menu-item'));
+            // Store menu items
+            navigationState.menuItems = Array.from(menuItems);
+
+            // Set initial focus
+            if (navigationState.sections.length > 0 && navigationState.sections[0].channels.length > 0) {
+                navigationState.sections[0].channels[0].focus();
+            }
         }
 
-        // Initialize focus on page load
-        window.addEventListener('load', function() {
-            const focusableElements = getFocusableElements();
-            if (focusableElements.length > 0) {
-                focusableElements[0].focus();
-                currentFocusIndex = 0;
-            }
-        });
+        // Grid navigation functions
+        function getGridInfo(element) {
+            const grid = element.parentElement;
+            const items = Array.from(grid.children);
+            const index = items.indexOf(element);
+            
+            // Calculate grid dimensions
+            const gridStyle = window.getComputedStyle(grid);
+            const gridColumns = gridStyle.gridTemplateColumns.split(' ').length;
+            
+            return {
+                items: items,
+                index: index,
+                columns: gridColumns,
+                rows: Math.ceil(items.length / gridColumns),
+                currentRow: Math.floor(index / gridColumns),
+                currentCol: index % gridColumns
+            };
+        }
 
-        // Handle visibility change (when returning from channel page)
-        document.addEventListener('visibilitychange', function() {
-            if (!document.hidden) {
-                // Page is visible again, restore focus
-                const focusableElements = getFocusableElements();
-                if (focusableElements.length > 0 && currentFocusIndex >= 0 && currentFocusIndex < focusableElements.length) {
-                    focusableElements[currentFocusIndex].focus();
+        function navigateGrid(direction, currentElement) {
+            const gridInfo = getGridInfo(currentElement);
+            let newIndex = gridInfo.index;
+
+            switch(direction) {
+                case 'right':
+                    if (gridInfo.currentCol < gridInfo.columns - 1 && newIndex < gridInfo.items.length - 1) {
+                        newIndex++;
+                    }
+                    break;
+                case 'left':
+                    if (gridInfo.currentCol > 0) {
+                        newIndex--;
+                    }
+                    break;
+                case 'down':
+                    newIndex = Math.min(newIndex + gridInfo.columns, gridInfo.items.length - 1);
+                    break;
+                case 'up':
+                    newIndex = Math.max(newIndex - gridInfo.columns, 0);
+                    break;
+            }
+
+            if (newIndex !== gridInfo.index && gridInfo.items[newIndex]) {
+                gridInfo.items[newIndex].focus();
+                return gridInfo.items[newIndex];
+            }
+            return currentElement;
+        }
+
+        // Section navigation
+        function navigateToNextSection() {
+            if (navigationState.currentSection < navigationState.sections.length - 1) {
+                navigationState.currentSection++;
+                const newSection = navigationState.sections[navigationState.currentSection];
+                if (newSection.channels.length > 0) {
+                    newSection.channels[0].focus();
+                    // Scroll to section
+                    newSection.element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+
+        function navigateToPrevSection() {
+            if (navigationState.currentSection > 0) {
+                navigationState.currentSection--;
+                const newSection = navigationState.sections[navigationState.currentSection];
+                if (newSection.channels.length > 0) {
+                    newSection.channels[0].focus();
+                    // Scroll to section
+                    newSection.element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+
+        // Menu navigation
+        function navigateMenu(direction) {
+            const items = navigationState.menuItems;
+            
+            switch(direction) {
+                case 'down':
+                    navigationState.currentMenuItem = Math.min(navigationState.currentMenuItem + 1, items.length - 1);
+                    break;
+                case 'up':
+                    navigationState.currentMenuItem = Math.max(navigationState.currentMenuItem - 1, 0);
+                    break;
+            }
+            
+            items[navigationState.currentMenuItem].focus();
+        }
+
+        // Update current section and channel based on focused element
+        function updateNavigationState(element) {
+            if (element.classList.contains('channel-card')) {
+                // Find which section this channel belongs to
+                for (let i = 0; i < navigationState.sections.length; i++) {
+                    const section = navigationState.sections[i];
+                    const channelIndex = section.channels.indexOf(element);
+                    if (channelIndex !== -1) {
+                        navigationState.currentSection = i;
+                        navigationState.currentChannel = channelIndex;
+                        break;
+                    }
+                }
+            } else if (element.classList.contains('menu-item')) {
+                navigationState.currentMenuItem = navigationState.menuItems.indexOf(element);
+            }
+        }
+
+        // Menu Toggle
+        menuToggle.addEventListener('click', function() {
+            sideMenu.classList.toggle('active');
+            navigationState.context = sideMenu.classList.contains('active') ? 'menu' : 'main';
+            
+            if (navigationState.context === 'menu') {
+                // Focus first menu item when opening menu
+                if (navigationState.menuItems.length > 0) {
+                    navigationState.menuItems[0].focus();
+                }
+            } else {
+                // Return focus to last focused channel when closing menu
+                const currentSection = navigationState.sections[navigationState.currentSection];
+                if (currentSection && currentSection.channels.length > 0) {
+                    currentSection.channels[Math.min(navigationState.currentChannel, currentSection.channels.length - 1)].focus();
                 }
             }
         });
@@ -996,7 +1124,6 @@
                 // Wait for iframe to load, then try to play video
                 iframe.onload = function() {
                     try {
-                        // Try to access video element in iframe and play it
                         setTimeout(() => {
                             try {
                                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1005,16 +1132,14 @@
                                     video.play().catch(e => console.log('Autoplay prevented:', e));
                                 }
                                 
-                                // Also try to play Shaka Player if present
                                 const shakaPlayer = iframe.contentWindow.player;
                                 if (shakaPlayer) {
                                     shakaPlayer.play().catch(e => console.log('Shaka autoplay prevented:', e));
                                 }
                             } catch (e) {
-                                // Cross-origin restrictions prevent access to iframe content
                                 console.log('Cannot access iframe content due to cross-origin restrictions');
                             }
-                        }, 1000); // Give it a second to initialize
+                        }, 1000);
                     } catch (e) {
                         console.log('Error loading iframe:', e);
                     }
@@ -1062,19 +1187,14 @@
             const iframe = card.querySelector('iframe');
             const timerElement = card.querySelector('.preview-timer');
             
-            // Clear timer
             if (currentPreviewTimer) {
                 clearInterval(currentPreviewTimer);
                 currentPreviewTimer = null;
             }
             
-            // Reset iframe to about:blank to stop video
             iframe.src = 'about:blank';
-            
-            // Reset timer display
             timerElement.textContent = '10s';
             
-            // Clear current preview card if it's this card
             if (currentPreviewCard === card) {
                 currentPreviewCard = null;
             }
@@ -1105,120 +1225,176 @@
                 return;
             }
             
-            // Don't handle navigation if side menu is open
-            if (sideMenu.classList.contains('active')) {
-                if (e.key === 'Escape') {
-                    sideMenu.classList.remove('active');
+            // Handle menu navigation
+            if (navigationState.context === 'menu') {
+                switch(e.key) {
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        navigateMenu('up');
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        navigateMenu('down');
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        const currentMenuItem = navigationState.menuItems[navigationState.currentMenuItem];
+                        if (currentMenuItem) {
+                            const action = currentMenuItem.getAttribute('data-action');
+                            handleMenuAction(action);
+                        }
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        sideMenu.classList.remove('active');
+                        navigationState.context = 'main';
+                        // Return focus to last focused channel
+                        const currentSection = navigationState.sections[navigationState.currentSection];
+                        if (currentSection && currentSection.channels.length > 0) {
+                            currentSection.channels[Math.min(navigationState.currentChannel, currentSection.channels.length - 1)].focus();
+                        }
+                        break;
                 }
                 return;
             }
             
-            const focusableElements = getFocusableElements();
+            // Main content navigation
+            const focusedElement = document.activeElement;
             
             switch(e.key) {
                 case 'ArrowRight':
                     e.preventDefault();
-                    currentFocusIndex = (currentFocusIndex + 1) % focusableElements.length;
-                    focusableElements[currentFocusIndex].focus();
+                    if (focusedElement && focusedElement.classList.contains('channel-card')) {
+                        navigateGrid('right', focusedElement);
+                    }
                     break;
                     
                 case 'ArrowLeft':
                     e.preventDefault();
-                    currentFocusIndex = (currentFocusIndex - 1 + focusableElements.length) % focusableElements.length;
-                    focusableElements[currentFocusIndex].focus();
+                    if (focusedElement && focusedElement.classList.contains('channel-card')) {
+                        navigateGrid('left', focusedElement);
+                    }
                     break;
                     
                 case 'ArrowDown':
                     e.preventDefault();
-                    const nextRowElement = findNextRowElement(focusableElements[currentFocusIndex], focusableElements);
-                    if (nextRowElement) {
-                        currentFocusIndex = focusableElements.indexOf(nextRowElement);
-                        nextRowElement.focus();
+                    if (focusedElement && focusedElement.classList.contains('channel-card')) {
+                        const nextElement = navigateGrid('down', focusedElement);
+                        // If we couldn't go down in the current grid, try next section
+                        if (nextElement === focusedElement) {
+                            navigateToNextSection();
+                        }
                     }
                     break;
                     
                 case 'ArrowUp':
                     e.preventDefault();
-                    const prevRowElement = findPrevRowElement(focusableElements[currentFocusIndex], focusableElements);
-                    if (prevRowElement) {
-                        currentFocusIndex = focusableElements.indexOf(prevRowElement);
-                        prevRowElement.focus();
+                    if (focusedElement && focusedElement.classList.contains('channel-card')) {
+                        const prevElement = navigateGrid('up', focusedElement);
+                        // If we couldn't go up in the current grid, try previous section
+                        if (prevElement === focusedElement && navigationState.currentSection > 0) {
+                            navigateToPrevSection();
+                        }
                     }
                     break;
                     
                 case 'Enter':
                     e.preventDefault();
-                    focusableElements[currentFocusIndex].click();
+                    if (focusedElement) {
+                        focusedElement.click();
+                    }
                     break;
                     
                 case 'Escape':
+                    e.preventDefault();
                     // Close any open overlays
                     if (previewModal.classList.contains('active')) {
                         previewModal.classList.remove('active');
                         modalIframe.src = '';
                     } else if (sideMenu.classList.contains('active')) {
                         sideMenu.classList.remove('active');
+                        navigationState.context = 'main';
                     }
                     break;
             }
         });
 
-        function findNextRowElement(currentElement, allElements) {
-            const currentRect = currentElement.getBoundingClientRect();
-            const currentCenterY = currentRect.top + currentRect.height / 2;
-            
-            let nextElement = null;
-            let minDistance = Infinity;
-            
-            allElements.forEach(element => {
-                if (element === currentElement) return;
-                
-                const rect = element.getBoundingClientRect();
-                const elementCenterY = rect.top + rect.height / 2;
-                
-                // Check if element is in the next row
-                if (elementCenterY > currentCenterY + 20) {
-                    const distance = Math.abs(elementCenterY - currentCenterY);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        nextElement = element;
+        // Handle menu actions
+        function handleMenuAction(action) {
+            switch(action) {
+                case 'home':
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigationState.currentSection = 0;
+                    if (navigationState.sections.length > 0 && navigationState.sections[0].channels.length > 0) {
+                        navigationState.sections[0].channels[0].focus();
                     }
-                }
-            });
+                    break;
+                case 'sports':
+                    navigateToSection('sports');
+                    break;
+                case 'entertainment':
+                    navigateToSection('entertainment');
+                    break;
+                case 'kids':
+                    navigateToSection('kids');
+                    break;
+                case 'news':
+                    navigateToSection('news');
+                    break;
+                case 'account':
+                case 'preferences':
+                case 'signout':
+                    // Handle these actions as needed
+                    console.log('Menu action:', action);
+                    break;
+            }
             
-            return nextElement;
+            // Close menu after action
+            sideMenu.classList.remove('active');
+            navigationState.context = 'main';
         }
 
-        function findPrevRowElement(currentElement, allElements) {
-            const currentRect = currentElement.getBoundingClientRect();
-            const currentCenterY = currentRect.top + currentRect.height / 2;
-            
-            let prevElement = null;
-            let minDistance = Infinity;
-            
-            allElements.forEach(element => {
-                if (element === currentElement) return;
-                
-                const rect = element.getBoundingClientRect();
-                const elementCenterY = rect.top + rect.height / 2;
-                
-                // Check if element is in the previous row
-                if (elementCenterY < currentCenterY - 20) {
-                    const distance = Math.abs(elementCenterY - currentCenterY);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        prevElement = element;
+        function navigateToSection(sectionName) {
+            for (let i = 0; i < navigationState.sections.length; i++) {
+                const section = navigationState.sections[i];
+                if (section.element.getAttribute('data-section') === sectionName) {
+                    navigationState.currentSection = i;
+                    if (section.channels.length > 0) {
+                        section.channels[0].focus();
+                        section.element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
+                    break;
                 }
-            });
-            
-            return prevElement;
+            }
         }
+
+        // Track focus changes to update navigation state
+        document.addEventListener('focusin', function(e) {
+            updateNavigationState(e.target);
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            initializeNavigation();
+        });
+
+        // Handle visibility change (when returning from channel page)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Restore focus to current position
+                const currentSection = navigationState.sections[navigationState.currentSection];
+                if (currentSection && currentSection.channels.length > 0) {
+                    const channelIndex = Math.min(navigationState.currentChannel, currentSection.channels.length - 1);
+                    currentSection.channels[channelIndex].focus();
+                }
+            }
+        });
 
         // Close menu when clicking outside
         document.addEventListener('click', function(e) {
             if (!sideMenu.contains(e.target) && !menuToggle.contains(e.target)) {
                 sideMenu.classList.remove('active');
+                navigationState.context = 'main';
             }
         });
     </script>
