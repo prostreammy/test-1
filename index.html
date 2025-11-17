@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>PROSTREAM-EPL1(VIP)</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Google Fonts for a professional watermark font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+
+    <!-- Shaka Player UI compiled library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/shaka-player.ui.js"></script>
+    <!-- Shaka Player UI compiled library default CSS -->
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/controls.css">
+    <!-- Chromecast SDK -->
+    <script defer src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
+
+    <style>
+        /* 
+         * Set up the page to be full-screen with no margins.
+        */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden; /* Prevents scrollbars */
+        }
+
+        /* 
+         * Apply the full-screen layout directly to the Shaka container.
+        */
+        [data-shaka-player-container] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 
+         * The video element fills its container and scales responsively.
+        */
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* 
+         * --- NEW: Custom Watermark Styles ---
+         * This creates the permanent, professional watermark.
+        */
+        #watermark {
+            position: absolute;
+            top: 2vw; /* Responsive distance from the top */
+            left: 2vw; /* Responsive distance from the left */
+            z-index: 9999; /* Ensures it's on top of the video and controls */
+            font-family: 'Roboto', sans-serif; /* Professional font */
+            font-size: 3.5vw; /* Large, responsive font size */
+            font-weight: 700; /* Bold */
+            color: rgba(255, 255, 255, 0.6); /* Semi-transparent white */
+            pointer-events: none; /* Makes it unclickable so it doesn't interfere with the player */
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9); /* Strong shadow for readability */
+            letter-spacing: 2px; /* Adds spacing for a more professional look */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 
+      The Shaka container is the direct child of the body.
+    -->
+    <div data-shaka-player-container>
+        <video autoplay data-shaka-player id="video"></video>
+        
+        <!-- 
+          NEW: The watermark element.
+          It's a simple div placed inside the container.
+        -->
+        <div id="watermark">PROSTREAM-EPL1</div>
+    </div>
+
+    <!-- Your application source (unchanged from the working version): -->
+    <script>
+        const manifestUri =
+            'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
+
+        async function init() {
+            const video = document.getElementById('video');
+            const ui = video['ui'];
+            const controls = ui.getControls();
+            const player = controls.getPlayer();
+
+            // --- Your Custom Configuration (unchanged) ---
+
+            player.configure({
+                drm: {
+                    clearKeys: {
+                        '002046c9a49b9ab1cdb6616bec5d26c3': 'd2f92f6b7edc9a1a05d393ba0c20ef9e'
+                    }
+                }
+            });
+
+            ui.configure({
+                controlPanelElements: ['play_pause', 'time_and_duration', 'spacer', 'mute', 'volume', 'fullscreen', 'overflow_menu'],
+                overflowMenuButtons: ['captions', 'quality', 'language', 'picture_in_picture', 'cast', 'playback_rate']
+            });
+
+            // --- End of Custom Configuration ---
+
+            window.player = player;
+            window.ui = ui;
+
+            player.addEventListener('error', onPlayerErrorEvent);
+            controls.addEventListener('error', onUIErrorEvent);
+
+            try {
+                await player.load(manifestUri);
+                console.log('✅ The video has now been loaded!');
+            } catch (error) {
+                onPlayerError(error);
+            }
+        }
+
+        function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function onPlayerError(error) { console.error('Error code', error.code, 'object', error); }
+        function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
+
+        document.addEventListener('shaka-ui-loaded', init);
+        document.addEventListener('shaka-ui-load-failed', initFailed);
+    </script>
+
+</body>
+</html>
