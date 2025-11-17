@@ -18,21 +18,15 @@
     <script defer src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
 
     <style>
-        /* 
-         * Set up the page to be full-screen with no margins.
-        */
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             background-color: #000;
-            overflow: hidden; /* Prevents scrollbars */
+            overflow: hidden;
         }
 
-        /* 
-         * Apply the full-screen layout directly to the Shaka container.
-        */
         [data-shaka-player-container] {
             position: absolute;
             top: 0;
@@ -41,18 +35,12 @@
             height: 100%;
         }
 
-        /* 
-         * The video element fills its container and scales responsively.
-        */
         #video {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        /* 
-         * --- Custom Watermark Styles ---
-        */
         #watermark {
             position: absolute;
             top: 2vw;
@@ -67,50 +55,46 @@
             letter-spacing: 2px;
         }
 
-        /* 
-         * --- Remote Control Focus Highlight ---
-        */
         [data-shaka-player-container] *:focus {
             outline: 2px solid #ffcc00 !important;
             background-color: rgba(255, 204, 0, 0.2) !important;
         }
         
-        /* Ensure buttons are focusable and remove default browser focus rings */
         [data-shaka-player-container] button {
              -webkit-appearance: none;
         }
 
         /* 
-         * --- NEW: Custom Caption Styling ---
-         * This overrides the default Shaka Player caption styles.
+         * --- SIMPLIFIED: Custom Caption Styling ---
+         * This is a more robust and simpler way to style captions.
         */
         .shaka-text-container {
-            /* Position at the bottom */
-            bottom: 15% !important;
-            top: auto !important;
+            /* Position at the bottom, 10% from the edge */
+            position: absolute !important;
+            bottom: 10% !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
-            
-            /* Layout: 70% width, centered */
+
+            /* Layout: 70% width, centered text */
             width: 70% !important;
             max-width: 70% !important;
             text-align: center !important;
             
-            /* Limit to 2 lines of text */
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
+            /* Remove default padding/spacing */
+            padding: 0 !important;
+            box-sizing: border-box !important;
         }
 
-        /* Style the text inside the container for better readability */
+        /* Style the text for better readability */
         .shaka-text-container span {
             background-color: rgba(0, 0, 0, 0.8) !important;
             color: white !important;
             padding: 0.2em 0.5em !important;
             border-radius: 0.2em !important;
-            font-size: 2.5vh !important; /* Responsive font size */
+            font-size: 2.5vh !important;
             line-height: 1.4 !important;
+            /* Ensure text wraps */
+            white-space: pre-wrap !important;
         }
     </style>
 </head>
@@ -130,7 +114,6 @@
             console.log('🎯 Making controls focusable for D-pad navigation...');
             const container = document.querySelector('[data-shaka-player-container]');
             if (!container) return;
-
             const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
             focusableElements.forEach(el => {
                 el.setAttribute('tabindex', '0');
@@ -138,7 +121,17 @@
             console.log(`✅ Made ${focusableElements.length} elements focusable.`);
         }
 
-        // --- Function to unmute the video ---
+        // --- NEW: Robust D-pad Focus Restorer ---
+        function ensureFocus() {
+            const container = document.querySelector('[data-shaka-player-container]');
+            const overflowButton = document.querySelector('.shaka-overflow-menu-button');
+            // If the active element is not inside the player, and the overflow button exists...
+            if (container && overflowButton && !container.contains(document.activeElement)) {
+                // ...set focus to the overflow button.
+                overflowButton.focus();
+            }
+        }
+        
         function unmuteVideo() {
             const video = document.getElementById('video');
             if (video.muted) {
@@ -156,14 +149,7 @@
 
             video.muted = true;
 
-            // --- FIX: Attempt to reduce live delay ---
             player.configure({
-                streaming: {
-                    lowLatencyMode: true,
-                    manifest: {
-                        presentationTimelineDelay: 10, // A small delay in seconds
-                    }
-                },
                 drm: {
                     clearKeys: {
                         '002046c9a49b9ab1cdb6616bec5d26c3': 'd2f92f6b7edc9a1a05d393ba0c20ef9e'
@@ -204,6 +190,23 @@
             player.addEventListener('error', onPlayerErrorEvent);
             controls.addEventListener('error', onUIErrorEvent);
             
+            // --- NEW: Automatically enable captions when they are available ---
+            player.addEventListener('trackschanged', () => {
+                console.log('🎬 Tracks changed, checking for captions...');
+                const textTracks = player.getTextTracks();
+                // Find the first subtitle track
+                const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
+
+                if (captionTrack) {
+                    console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
+                    player.selectTextTrack(captionTrack);
+                    player.setTextTrackVisibility(true);
+                    console.log('🎬 Caption track selected and enabled.');
+                } else {
+                    console.log('🎬 No subtitle track found.');
+                }
+            });
+
             video.addEventListener('playing', () => {
                 setTimeout(unmuteVideo, 500);
             });
@@ -211,10 +214,8 @@
             try {
                 await player.load(manifestUri);
                 console.log('✅ The video has now been loaded!');
-                
                 await player.play();
                 console.log('✅ Autoplay started (muted). Will unmute shortly.');
-
             } catch (error) {
                 onPlayerError(error);
             }
@@ -231,6 +232,16 @@
         });
 
         document.addEventListener('keydown', unmuteVideo);
+        
+        // --- NEW: Add the focus restorer to all D-pad key presses ---
+        document.addEventListener('keydown', (e) => {
+            // We only care about navigation keys (arrow keys, OK, etc.)
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
+                // A small timeout to let the browser's default action happen first.
+                setTimeout(ensureFocus, 0);
+            }
+        });
+
         document.addEventListener('shaka-ui-load-failed', initFailed);
     </script>
 
