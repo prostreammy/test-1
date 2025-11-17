@@ -65,35 +65,44 @@
         }
 
         /* 
-         * --- SIMPLIFIED: Custom Caption Styling ---
-         * This is a more robust and simpler way to style captions.
+         * --- NEW: Style for our custom Live Button ---
         */
-        .shaka-text-container {
-            /* Position at the bottom, 10% from the edge */
+        .live-button {
+            background-color: rgba(255, 0, 0, 0.7) !important;
+            color: white !important;
+            font-weight: bold !important;
+            font-size: 10px !important;
+            padding: 2px 5px !important;
+            border-radius: 3px !important;
+            margin-left: 5px !important;
+            text-transform: uppercase !important;
+        }
+
+        /* 
+         * --- UPDATED: Aggressive Caption Styling ---
+         * This uses a more specific selector to override other styles.
+        */
+        [data-shaka-player-container] .shaka-text-container {
+            /* Position from the top to avoid conflicts */
             position: absolute !important;
-            bottom: 10% !important;
+            top: 85% !important; /* Positions it 15% from the bottom */
             left: 50% !important;
             transform: translateX(-50%) !important;
-
-            /* Layout: 70% width, centered text */
             width: 70% !important;
             max-width: 70% !important;
             text-align: center !important;
-            
-            /* Remove default padding/spacing */
             padding: 0 !important;
             box-sizing: border-box !important;
+            z-index: 10 !important; /* Ensure it's above the video */
         }
 
-        /* Style the text for better readability */
-        .shaka-text-container span {
+        [data-shaka-player-container] .shaka-text-container span {
             background-color: rgba(0, 0, 0, 0.8) !important;
             color: white !important;
             padding: 0.2em 0.5em !important;
             border-radius: 0.2em !important;
             font-size: 2.5vh !important;
             line-height: 1.4 !important;
-            /* Ensure text wraps */
             white-space: pre-wrap !important;
         }
     </style>
@@ -109,7 +118,33 @@
         const manifestUri =
             'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
 
-        // --- Function to fix D-pad navigation ---
+        // --- NEW: Function to add the custom Live button ---
+        function addLiveButton() {
+            const controlsContainer = document.querySelector('.shaka-controls-container');
+            const playPauseContainer = document.querySelector('.shaka-play-pause-container');
+            
+            if (!controlsContainer || !playPauseContainer) {
+                console.error('Could not find containers to add live button.');
+                return;
+            }
+
+            const liveButton = document.createElement('button');
+            liveButton.className = 'live-button shaka-no-propagation';
+            liveButton.textContent = 'LIVE';
+            liveButton.setAttribute('tabindex', '0');
+
+            liveButton.addEventListener('click', () => {
+                if (window.player) {
+                    console.log('🔴 Live button clicked, seeking to live edge.');
+                    window.player.seekToLiveEdge();
+                }
+            });
+
+            // Insert the live button right after the play/pause container
+            playPauseContainer.parentNode.insertBefore(liveButton, playPauseContainer.nextSibling);
+            console.log('✅ Live button added.');
+        }
+
         function makeControlsFocusable() {
             console.log('🎯 Making controls focusable for D-pad navigation...');
             const container = document.querySelector('[data-shaka-player-container]');
@@ -121,13 +156,10 @@
             console.log(`✅ Made ${focusableElements.length} elements focusable.`);
         }
 
-        // --- NEW: Robust D-pad Focus Restorer ---
         function ensureFocus() {
             const container = document.querySelector('[data-shaka-player-container]');
             const overflowButton = document.querySelector('.shaka-overflow-menu-button');
-            // If the active element is not inside the player, and the overflow button exists...
             if (container && overflowButton && !container.contains(document.activeElement)) {
-                // ...set focus to the overflow button.
                 overflowButton.focus();
             }
         }
@@ -190,11 +222,9 @@
             player.addEventListener('error', onPlayerErrorEvent);
             controls.addEventListener('error', onUIErrorEvent);
             
-            // --- NEW: Automatically enable captions when they are available ---
             player.addEventListener('trackschanged', () => {
                 console.log('🎬 Tracks changed, checking for captions...');
                 const textTracks = player.getTextTracks();
-                // Find the first subtitle track
                 const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
 
                 if (captionTrack) {
@@ -229,15 +259,13 @@
         document.addEventListener('shaka-ui-loaded', () => {
             init();
             makeControlsFocusable();
+            addLiveButton(); // Call our new function to add the button
         });
 
         document.addEventListener('keydown', unmuteVideo);
         
-        // --- NEW: Add the focus restorer to all D-pad key presses ---
         document.addEventListener('keydown', (e) => {
-            // We only care about navigation keys (arrow keys, OK, etc.)
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
-                // A small timeout to let the browser's default action happen first.
                 setTimeout(ensureFocus, 0);
             }
         });
