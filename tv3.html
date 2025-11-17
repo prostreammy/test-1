@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>PROSTREAM-EPL1(VIP)</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Google Fonts for a professional watermark font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+
+    <!-- Shaka Player UI compiled library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/shaka-player.ui.js"></script>
+    <!-- Shaka Player UI compiled library default CSS -->
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/controls.css">
+    <!-- Chromecast SDK -->
+    <script defer src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        [data-shaka-player-container] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #watermark {
+            position: absolute;
+            top: 2vw;
+            left: 2vw;
+            z-index: 9999;
+            font-family: 'Roboto', sans-serif;
+            font-size: 3.5vw;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+            letter-spacing: 2px;
+        }
+
+        [data-shaka-player-container] *:focus {
+            outline: 2px solid #ffcc00 !important;
+            background-color: rgba(255, 204, 0, 0.2) !important;
+        }
+        
+        [data-shaka-player-container] button {
+             -webkit-appearance: none;
+        }
+
+        /* 
+         * --- Caption Styling ---
+        */
+        [data-shaka-player-container] .shaka-text-container {
+            position: absolute !important;
+            top: 85% !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 70% !important;
+            text-align: center !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            z-index: 10 !important;
+
+            /* Clamp to 2 lines */
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+        }
+
+        [data-shaka-player-container] .shaka-text-container span {
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            padding: 0.2em 0.5em !important;
+            border-radius: 0.2em !important;
+            font-size: 2.5vh !important;
+            line-height: 1.4 !important;
+            white-space: pre-wrap !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div data-shaka-player-container>
+        <video data-shaka-player id="video"></video>
+        <div id="watermark">PROSTREAM-TV3</div>
+    </div>
+
+    <script>
+        const manifestUri =
+            'https://mifntechnology.github.io/siaranMy/channels/Tv3/manifest.m3u8?Auth_key=3bc3f0e518aed92e80a98118e5bc2c10&amp;Token=5fce364fbc4499856597b19a96f44648';
+
+        function makeControlsFocusable() {
+            console.log('🎯 Making controls focusable for D-pad navigation...');
+            const container = document.querySelector('[data-shaka-player-container]');
+            if (!container) return;
+            const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
+            focusableElements.forEach(el => {
+                el.setAttribute('tabindex', '0');
+            });
+            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
+        }
+
+        function ensureFocus() {
+            const container = document.querySelector('[data-shaka-player-container]');
+            const overflowButton = document.querySelector('.shaka-overflow-menu-button');
+            if (container && overflowButton && !container.contains(document.activeElement)) {
+                overflowButton.focus();
+            }
+        }
+        
+        function unmuteVideo() {
+            const video = document.getElementById('video');
+            if (video.muted) {
+                video.muted = false;
+                console.log('🔊 Video has been unmuted.');
+                document.removeEventListener('keydown', unmuteVideo);
+            }
+        }
+
+        async function init() {
+            const video = document.getElementById('video');
+            const ui = video['ui'];
+            const controls = ui.getControls();
+            const player = controls.getPlayer();
+
+            video.muted = true;
+
+            // --- UPDATED: Configure for Low Latency to improve caption sync ---
+            player.configure({
+                streaming: {
+                    lowLatencyMode: true,
+                    // A small delay makes the stream more resilient to network issues
+                    // while still being close to live.
+                    manifest: {
+                        presentationTimelineDelay: 5,
+                    },
+                    // Prevents building a large buffer that can cause sync issues.
+                    bufferBehind: 10,
+                },
+                drm: {
+                    clearKeys: {
+                        '3bc3f0e518aed92e80a98118e5bc2c10':'5fce364fbc4499856597b19a96f44648'
+                    }
+                }
+            });
+
+            ui.configure({
+                addSeekBar: false,
+                addBigPlayButton: true,
+                singleClickForPlayAndPause: false,
+                enableTooltips: false,
+                doubleClickForFullscreen: false,
+
+                controlPanelElements: [
+                    'play_pause',
+                    'skip_previous',
+                    'skip_next',
+                    'spacer',
+                    'overflow_menu',
+                    'fullscreen',
+                ],
+                overflowMenuButtons: [
+                    'captions',
+                    'quality',
+                    'language',
+                    'chapter',
+                    'picture_in_picture',
+                    'playback_rate',
+                    'recenter_vr',
+                    'toggle_stereoscopic',
+                ],
+            });
+
+            window.player = player;
+            window.ui = ui;
+
+            player.addEventListener('error', onPlayerErrorEvent);
+            controls.addEventListener('error', onUIErrorEvent);
+            
+            player.addEventListener('trackschanged', () => {
+                console.log('🎬 Tracks changed, checking for captions...');
+                const textTracks = player.getTextTracks();
+                const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
+
+                if (captionTrack) {
+                    console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
+                    player.selectTextTrack(captionTrack);
+                    player.setTextTrackVisibility(true);
+                    console.log('🎬 Caption track selected and enabled.');
+                } else {
+                    console.log('🎬 No subtitle track found.');
+                }
+            });
+
+            video.addEventListener('playing', () => {
+                setTimeout(unmuteVideo, 500);
+            });
+
+            try {
+                await player.load(manifestUri);
+                console.log('✅ The video has now been loaded!');
+                await player.play();
+                console.log('✅ Autoplay started (muted). Will unmute shortly.');
+            } catch (error) {
+                onPlayerError(error);
+            }
+        }
+
+        function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function onPlayerError(error) { console.error('Error code', error.code, 'object', error); }
+        function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
+
+        document.addEventListener('shaka-ui-loaded', () => {
+            init();
+            makeControlsFocusable();
+        });
+
+        document.addEventListener('keydown', unmuteVideo);
+        
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
+                setTimeout(ensureFocus, 0);
+            }
+        });
+
+        document.addEventListener('shaka-ui-load-failed', initFailed);
+    </script>
+
+</body>
+</html>
