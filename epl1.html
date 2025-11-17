@@ -79,6 +79,39 @@
         [data-shaka-player-container] button {
              -webkit-appearance: none;
         }
+
+        /* 
+         * --- NEW: Custom Caption Styling ---
+         * This overrides the default Shaka Player caption styles.
+        */
+        .shaka-text-container {
+            /* Position at the bottom */
+            bottom: 15% !important;
+            top: auto !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            
+            /* Layout: 70% width, centered */
+            width: 70% !important;
+            max-width: 70% !important;
+            text-align: center !important;
+            
+            /* Limit to 2 lines of text */
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+        }
+
+        /* Style the text inside the container for better readability */
+        .shaka-text-container span {
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            padding: 0.2em 0.5em !important;
+            border-radius: 0.2em !important;
+            font-size: 2.5vh !important; /* Responsive font size */
+            line-height: 1.4 !important;
+        }
     </style>
 </head>
 <body>
@@ -111,7 +144,6 @@
             if (video.muted) {
                 video.muted = false;
                 console.log('🔊 Video has been unmuted.');
-                // Remove the listener after it successfully unmutes
                 document.removeEventListener('keydown', unmuteVideo);
             }
         }
@@ -122,10 +154,16 @@
             const controls = ui.getControls();
             const player = controls.getPlayer();
 
-            // --- FIX: Start muted to allow autoplay, then unmute ---
             video.muted = true;
 
+            // --- FIX: Attempt to reduce live delay ---
             player.configure({
+                streaming: {
+                    lowLatencyMode: true,
+                    manifest: {
+                        presentationTimelineDelay: 10, // A small delay in seconds
+                    }
+                },
                 drm: {
                     clearKeys: {
                         '002046c9a49b9ab1cdb6616bec5d26c3': 'd2f92f6b7edc9a1a05d393ba0c20ef9e'
@@ -133,22 +171,18 @@
                 }
             });
 
-            // --- UPDATED: UI Configuration with Seek Bar Disabled ---
             ui.configure({
-                // --- KEY CHANGE: Disable the seek bar ---
                 addSeekBar: false,
-
                 addBigPlayButton: true,
                 singleClickForPlayAndPause: false,
                 enableTooltips: false,
                 doubleClickForFullscreen: false,
 
-                // Control panel elements, updated to remove time display
                 controlPanelElements: [
                     'play_pause',
                     'skip_previous',
                     'skip_next',
-                    'spacer', // This will now push the overflow menu to the right
+                    'spacer',
                     'overflow_menu',
                     'fullscreen',
                 ],
@@ -170,9 +204,7 @@
             player.addEventListener('error', onPlayerErrorEvent);
             controls.addEventListener('error', onUIErrorEvent);
             
-            // --- Add listener to unmute as soon as playback starts ---
             video.addEventListener('playing', () => {
-                // A small delay to ensure the playback state is fully established
                 setTimeout(unmuteVideo, 500);
             });
 
@@ -198,9 +230,7 @@
             makeControlsFocusable();
         });
 
-        // --- Add a fallback to unmute on any remote button press ---
         document.addEventListener('keydown', unmuteVideo);
-
         document.addEventListener('shaka-ui-load-failed', initFailed);
     </script>
 
