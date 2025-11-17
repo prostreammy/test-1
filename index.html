@@ -73,7 +73,8 @@
             aspect-ratio: 16/9;
         }
 
-        .channel-card:hover {
+        .channel-card:hover,
+        .channel-card.focused {
             transform: scale(1.05);
             z-index: 10;
             box-shadow: 0 0 30px rgba(229, 9, 20, 0.5);
@@ -100,7 +101,8 @@
             pointer-events: none;
         }
 
-        .channel-card:hover .channel-preview iframe {
+        .channel-card:hover .channel-preview iframe,
+        .channel-card.focused .channel-preview iframe {
             display: block;
         }
 
@@ -115,7 +117,8 @@
             z-index: 1;
         }
 
-        .channel-card:hover .channel-logo {
+        .channel-card:hover .channel-logo,
+        .channel-card.focused .channel-logo {
             opacity: 0.3;
         }
 
@@ -129,7 +132,8 @@
             z-index: 2;
         }
 
-        .channel-card:hover .preview-loading {
+        .channel-card:hover .preview-loading,
+        .channel-card.focused .preview-loading {
             display: block;
         }
 
@@ -158,7 +162,8 @@
             z-index: 5;
         }
 
-        .channel-card:hover .preview-timer {
+        .channel-card:hover .preview-timer,
+        .channel-card.focused .preview-timer {
             display: block;
         }
 
@@ -175,7 +180,8 @@
             z-index: 3;
         }
 
-        .channel-card:hover .channel-info {
+        .channel-card:hover .channel-info,
+        .channel-card.focused .channel-info {
             transform: translateY(0);
         }
 
@@ -231,7 +237,8 @@
             z-index: 4;
         }
 
-        .channel-card:hover .play-button {
+        .channel-card:hover .play-button,
+        .channel-card.focused .play-button {
             opacity: 1;
         }
 
@@ -1077,6 +1084,83 @@
             }
         }
 
+        // Start preview function (used for both hover and focus)
+        function startPreview(card) {
+            // Clear any existing preview timer
+            if (currentPreviewTimer) {
+                clearInterval(currentPreviewTimer);
+            }
+            
+            // Stop previous preview if different card
+            if (currentPreviewCard && currentPreviewCard !== card) {
+                stopPreview(currentPreviewCard);
+            }
+            
+            // Set current preview card
+            currentPreviewCard = card;
+            
+            const iframe = card.querySelector('iframe');
+            const timerElement = card.querySelector('.preview-timer');
+            
+            // Load iframe content
+            iframe.src = iframe.getAttribute('data-src');
+            
+            // Wait for iframe to load, then try to play video
+            iframe.onload = function() {
+                try {
+                    setTimeout(() => {
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            const video = iframeDoc.querySelector('video');
+                            if (video && video.paused) {
+                                video.play().catch(e => console.log('Autoplay prevented:', e));
+                            }
+                            
+                            const shakaPlayer = iframe.contentWindow.player;
+                            if (shakaPlayer) {
+                                shakaPlayer.play().catch(e => console.log('Shaka autoplay prevented:', e));
+                            }
+                        } catch (e) {
+                            console.log('Cannot access iframe content due to cross-origin restrictions');
+                        }
+                    }, 1000);
+                } catch (e) {
+                    console.log('Error loading iframe:', e);
+                }
+            };
+            
+            // Start countdown timer
+            let timeLeft = 10;
+            timerElement.textContent = `${timeLeft}s`;
+            
+            currentPreviewTimer = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = `${timeLeft}s`;
+                
+                if (timeLeft <= 0) {
+                    stopPreview(card);
+                }
+            }, 1000);
+        }
+
+        // Function to stop preview
+        function stopPreview(card) {
+            const iframe = card.querySelector('iframe');
+            const timerElement = card.querySelector('.preview-timer');
+            
+            if (currentPreviewTimer) {
+                clearInterval(currentPreviewTimer);
+                currentPreviewTimer = null;
+            }
+            
+            iframe.src = 'about:blank';
+            timerElement.textContent = '10s';
+            
+            if (currentPreviewCard === card) {
+                currentPreviewCard = null;
+            }
+        }
+
         // Menu Toggle
         menuToggle.addEventListener('click', function() {
             sideMenu.classList.toggle('active');
@@ -1096,71 +1180,32 @@
             }
         });
 
-        // Handle channel card hover events
+        // Handle channel card events
         channelCards.forEach(card => {
-            const iframe = card.querySelector('iframe');
             const playButton = card.querySelector('.play-button');
             const previewUrl = card.getAttribute('data-preview');
-            const timerElement = card.querySelector('.preview-timer');
             
             // Mouse enter - start preview
             card.addEventListener('mouseenter', function() {
-                // Clear any existing preview timer
-                if (currentPreviewTimer) {
-                    clearInterval(currentPreviewTimer);
-                }
-                
-                // Stop previous preview if different card
-                if (currentPreviewCard && currentPreviewCard !== card) {
-                    stopPreview(currentPreviewCard);
-                }
-                
-                // Set current preview card
-                currentPreviewCard = card;
-                
-                // Load iframe content
-                iframe.src = iframe.getAttribute('data-src');
-                
-                // Wait for iframe to load, then try to play video
-                iframe.onload = function() {
-                    try {
-                        setTimeout(() => {
-                            try {
-                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                                const video = iframeDoc.querySelector('video');
-                                if (video && video.paused) {
-                                    video.play().catch(e => console.log('Autoplay prevented:', e));
-                                }
-                                
-                                const shakaPlayer = iframe.contentWindow.player;
-                                if (shakaPlayer) {
-                                    shakaPlayer.play().catch(e => console.log('Shaka autoplay prevented:', e));
-                                }
-                            } catch (e) {
-                                console.log('Cannot access iframe content due to cross-origin restrictions');
-                            }
-                        }, 1000);
-                    } catch (e) {
-                        console.log('Error loading iframe:', e);
-                    }
-                };
-                
-                // Start countdown timer
-                let timeLeft = 10;
-                timerElement.textContent = `${timeLeft}s`;
-                
-                currentPreviewTimer = setInterval(() => {
-                    timeLeft--;
-                    timerElement.textContent = `${timeLeft}s`;
-                    
-                    if (timeLeft <= 0) {
-                        stopPreview(card);
-                    }
-                }, 1000);
+                startPreview(card);
             });
             
             // Mouse leave - stop preview
             card.addEventListener('mouseleave', function() {
+                if (currentPreviewCard === card) {
+                    stopPreview(card);
+                }
+            });
+            
+            // Focus - start preview (for D-pad navigation)
+            card.addEventListener('focus', function() {
+                card.classList.add('focused');
+                startPreview(card);
+            });
+            
+            // Blur - stop preview
+            card.addEventListener('blur', function() {
+                card.classList.remove('focused');
                 if (currentPreviewCard === card) {
                     stopPreview(card);
                 }
@@ -1181,24 +1226,6 @@
                 }
             });
         });
-
-        // Function to stop preview
-        function stopPreview(card) {
-            const iframe = card.querySelector('iframe');
-            const timerElement = card.querySelector('.preview-timer');
-            
-            if (currentPreviewTimer) {
-                clearInterval(currentPreviewTimer);
-                currentPreviewTimer = null;
-            }
-            
-            iframe.src = 'about:blank';
-            timerElement.textContent = '10s';
-            
-            if (currentPreviewCard === card) {
-                currentPreviewCard = null;
-            }
-        }
 
         // Close modal
         previewModalClose.addEventListener('click', function() {
@@ -1272,7 +1299,18 @@
                 case 'ArrowLeft':
                     e.preventDefault();
                     if (focusedElement && focusedElement.classList.contains('channel-card')) {
-                        navigateGrid('left', focusedElement);
+                        const gridInfo = getGridInfo(focusedElement);
+                        // Check if we're at the first column
+                        if (gridInfo.currentCol === 0) {
+                            // Open menu
+                            sideMenu.classList.add('active');
+                            navigationState.context = 'menu';
+                            if (navigationState.menuItems.length > 0) {
+                                navigationState.menuItems[0].focus();
+                            }
+                        } else {
+                            navigateGrid('left', focusedElement);
+                        }
                     }
                     break;
                     
@@ -1280,7 +1318,7 @@
                     e.preventDefault();
                     if (focusedElement && focusedElement.classList.contains('channel-card')) {
                         const nextElement = navigateGrid('down', focusedElement);
-                        // If we couldn't go down in the current grid, try next section
+                        // If we couldn't go down in current grid, try next section
                         if (nextElement === focusedElement) {
                             navigateToNextSection();
                         }
@@ -1291,7 +1329,7 @@
                     e.preventDefault();
                     if (focusedElement && focusedElement.classList.contains('channel-card')) {
                         const prevElement = navigateGrid('up', focusedElement);
-                        // If we couldn't go up in the current grid, try previous section
+                        // If we couldn't go up in current grid, try previous section
                         if (prevElement === focusedElement && navigationState.currentSection > 0) {
                             navigateToPrevSection();
                         }
