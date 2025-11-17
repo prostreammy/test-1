@@ -65,34 +65,30 @@
         }
 
         /* 
-         * --- Caption Styling ---
+         * --- NEW: Style for our Custom Caption Display ---
         */
-        [data-shaka-player-container] .shaka-text-container {
+        #custom-captions {
             position: absolute !important;
-            top: 85% !important;
+            bottom: 15% !important; /* 15% from the bottom */
             left: 50% !important;
             transform: translateX(-50%) !important;
             width: 70% !important;
             text-align: center !important;
-            padding: 0 !important;
-            box-sizing: border-box !important;
             z-index: 10 !important;
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 0.2em 0.5em;
+            border-radius: 0.2em;
+            font-size: 2.5vh;
+            line-height: 1.4;
 
             /* Clamp to 2 lines */
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-        }
-
-        [data-shaka-player-container] .shaka-text-container span {
-            background-color: rgba(0, 0, 0, 0.8) !important;
-            color: white !important;
-            padding: 0.2em 0.5em !important;
-            border-radius: 0.2em !important;
-            font-size: 2.5vh !important;
-            line-height: 1.4 !important;
-            white-space: pre-wrap !important;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            pointer-events: none; /* Ensure captions don't block clicks */
         }
     </style>
 </head>
@@ -101,21 +97,54 @@
     <div data-shaka-player-container>
         <video data-shaka-player id="video"></video>
         <div id="watermark">PROSTREAM-EPL1</div>
+        <!-- NEW: Our custom caption container -->
+        <div id="custom-captions"></div>
     </div>
 
     <script>
-        const manifestUri =
-            'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
+        const manifestUri = 'https://fsly.stream.peacocktv.com/Content/CMAF_CTR-4s/Live/channel(vc1021n07j)/master.mpd';
+
+        // --- NEW: Global variables for our caption sync engine ---
+        let captionOffset = 0; // The sync offset in seconds
+        let currentTextTrack = null;
+        let syncInterval = null;
+
+        const customCaptionsDiv = document.getElementById('custom-captions');
+
+        // --- NEW: Our manual caption sync function ---
+        function checkCaptionSync() {
+            if (!window.player || !currentTextTrack) return;
+
+            const video = document.getElementById('video');
+            const currentTime = video.currentTime + captionOffset;
+            let activeCue = null;
+
+            // Find the cue that should be active at the current time
+            for (const cue of currentTextTrack.cues) {
+                if (currentTime >= cue.startTime && currentTime < cue.endTime) {
+                    activeCue = cue;
+                    break;
+                }
+            }
+
+            // Update our custom caption display
+            customCaptionsDiv.innerText = activeCue ? activeCue.text : '';
+        }
+
+        // --- NEW: Functions to adjust caption sync ---
+        function adjustCaptionSync(amount) {
+            captionOffset += amount;
+            console.log(`⏱️ Caption offset adjusted to ${captionOffset}s`);
+            // Immediately check sync after adjustment
+            checkCaptionSync();
+        }
 
         function makeControlsFocusable() {
-            console.log('🎯 Making controls focusable for D-pad navigation...');
+            console.log('🎯 Making controls focusable...');
             const container = document.querySelector('[data-shaka-player-container]');
             if (!container) return;
             const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
-            focusableElements.forEach(el => {
-                el.setAttribute('tabindex', '0');
-            });
-            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
+            focusableElements.forEach(el => el.setAttribute('tabindex', '0'));
         }
 
         function ensureFocus() {
@@ -143,18 +172,15 @@
 
             video.muted = true;
 
-            // --- UPDATED: Configure for Low Latency to improve caption sync ---
+            // --- Configure for Low Latency and Disable Default Captions ---
             player.configure({
                 streaming: {
                     lowLatencyMode: true,
-                    // A small delay makes the stream more resilient to network issues
-                    // while still being close to live.
-                    manifest: {
-                        presentationTimelineDelay: 5,
-                    },
-                    // Prevents building a large buffer that can cause sync issues.
+                    manifest: { presentationTimelineDelay: 5 },
                     bufferBehind: 10,
                 },
+                // --- KEY: Use a factory that does nothing, effectively disabling Shaka's text display ---
+                textDisplayFactory: () => new shaka.text.TextDisplayer(),
                 drm: {
                     clearKeys: {
                         '002046c9a49b9ab1cdb6616bec5d26c3': 'd2f92f6b7edc9a1a05d393ba0c20ef9e'
@@ -162,21 +188,14 @@
                 }
             });
 
+            // --- NEW: Add custom sync buttons to the overflow menu ---
             ui.configure({
                 addSeekBar: false,
                 addBigPlayButton: true,
                 singleClickForPlayAndPause: false,
                 enableTooltips: false,
                 doubleClickForFullscreen: false,
-
-                controlPanelElements: [
-                    'play_pause',
-                    'skip_previous',
-                    'skip_next',
-                    'spacer',
-                    'overflow_menu',
-                    'fullscreen',
-                ],
+                controlPanelElements: ['play_pause', 'skip_previous', 'skip_next', 'spacer', 'overflow_menu', 'fullscreen'],
                 overflowMenuButtons: [
                     'captions',
                     'quality',
@@ -186,6 +205,9 @@
                     'playback_rate',
                     'recenter_vr',
                     'toggle_stereoscopic',
+                    // --- NEW: Add our custom sync buttons ---
+                    { name: 'sync_plus', label: 'Captions +0.5s', icon: 'add_circle_outline' },
+                    { name: 'sync_minus', label: 'Captions -0.5s', icon: 'remove_circle_outline' },
                 ],
             });
 
@@ -195,18 +217,36 @@
             player.addEventListener('error', onPlayerErrorEvent);
             controls.addEventListener('error', onUIErrorEvent);
             
+            // --- Listen for clicks on our new custom buttons ---
+            controls.addEventListener('overflowmenuclick', (event) => {
+                if (event.button.name === 'sync_plus') {
+                    adjustCaptionSync(0.5);
+                } else if (event.button.name === 'sync_minus') {
+                    adjustCaptionSync(-0.5);
+                }
+            });
+
             player.addEventListener('trackschanged', () => {
-                console.log('🎬 Tracks changed, checking for captions...');
+                console.log('🎬 Tracks changed, setting up custom captions...');
                 const textTracks = player.getTextTracks();
                 const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
 
                 if (captionTrack) {
-                    console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
-                    player.selectTextTrack(captionTrack);
-                    player.setTextTrackVisibility(true);
-                    console.log('🎬 Caption track selected and enabled.');
+                    console.log('🎬 Found caption track:', captionTrack.language);
+                    player.selectTextTrack(captionTrack); // Select track to get its cues
+                    player.setTextTrackVisibility(false); // But keep Shaka's display hidden
+                    currentTextTrack = captionTrack;
+                    
+                    // Start our sync engine if it's not already running
+                    if (!syncInterval) {
+                        syncInterval = setInterval(checkCaptionSync, 250); // Check 4 times per second
+                    }
                 } else {
                     console.log('🎬 No subtitle track found.');
+                    currentTextTrack = null;
+                    clearInterval(syncInterval);
+                    syncInterval = null;
+                    customCaptionsDiv.innerText = '';
                 }
             });
 
@@ -218,7 +258,7 @@
                 await player.load(manifestUri);
                 console.log('✅ The video has now been loaded!');
                 await player.play();
-                console.log('✅ Autoplay started (muted). Will unmute shortly.');
+                console.log('✅ Autoplay started.');
             } catch (error) {
                 onPlayerError(error);
             }
@@ -235,7 +275,6 @@
         });
 
         document.addEventListener('keydown', unmuteVideo);
-        
         document.addEventListener('keydown', (e) => {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
                 setTimeout(ensureFocus, 0);
