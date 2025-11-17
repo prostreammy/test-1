@@ -32,57 +32,12 @@
             position: relative;
         }
 
-        /* Category Navigation - Visual Only */
-        .category-nav {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 30px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-            scrollbar-width: none;
-        }
-
-        .category-nav::-webkit-scrollbar {
-            display: none;
-        }
-
-        .category-item {
-            color: #e5e5e5;
-            font-size: 18px;
-            font-weight: 500;
-            white-space: nowrap;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .category-item:hover {
-            color: #fff;
-        }
-
-        .category-item.active {
-            color: #e50914;
-        }
-
-        .category-item.active::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: #e50914;
-            border-radius: 2px;
-        }
-
         /* Content Sections */
         .content-section {
             margin-bottom: 50px;
         }
 
         .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             margin-bottom: 20px;
         }
 
@@ -97,17 +52,6 @@
         .section-title i {
             color: #e50914;
             font-size: 20px;
-        }
-
-        .see-all {
-            color: #e5e5e5;
-            font-size: 16px;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-
-        .see-all:hover {
-            color: #e50914;
         }
 
         /* Channel Grid */
@@ -510,8 +454,7 @@
 
         /* Focus styles for TV navigation */
         .channel-card:focus,
-        .menu-item:focus,
-        .category-item:focus {
+        .menu-item:focus {
             outline: 2px solid #e50914;
             outline-offset: 2px;
         }
@@ -583,22 +526,10 @@
 
     <!-- Main TV App Container -->
     <div class="tv-app-container">
-        <!-- Category Navigation - Visual Only -->
-        <div class="category-nav">
-            <div class="category-item active">All</div>
-            <div class="category-item">Sports</div>
-            <div class="category-item">Entertainment</div>
-            <div class="category-item">Kids</div>
-            <div class="category-item">News</div>
-            <div class="category-item">Movies</div>
-            <div class="category-item">Series</div>
-        </div>
-
         <!-- Sports Channels Section -->
         <div class="content-section">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-tv"></i> Sports Channels</h2>
-                <div class="see-all">See All →</div>
             </div>
             <div class="channels-grid">
                 <a href="epl1.html" class="channel-card" data-preview="epl1.html" tabindex="0">
@@ -751,7 +682,6 @@
         <div class="content-section">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-film"></i> Entertainment</h2>
-                <div class="see-all">See All →</div>
             </div>
             <div class="channels-grid">
                 <a href="ria.html" class="channel-card" data-preview="ria.html" tabindex="0">
@@ -856,7 +786,6 @@
         <div class="content-section">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-child"></i> Kids + Movies</h2>
-                <div class="see-all">See All →</div>
             </div>
             <div class="channels-grid">
                 <a href="ceria.html" class="channel-card" data-preview="ceria.html" tabindex="0">
@@ -937,7 +866,6 @@
         <div class="content-section">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-newspaper"></i> News</h2>
-                <div class="see-all">See All →</div>
             </div>
             <div class="channels-grid">
                 <a href="awani.html" class="channel-card" data-preview="awani.html" tabindex="0">
@@ -1005,6 +933,7 @@
         const modalIframe = document.getElementById('modalIframe');
         const previewModalClose = document.getElementById('previewModalClose');
         const channelCards = document.querySelectorAll('.channel-card');
+        const menuItems = document.querySelectorAll('.menu-item');
 
         // Preview timer management
         let currentPreviewTimer = null;
@@ -1013,11 +942,15 @@
 
         // Store focus index for TV navigation
         let currentFocusIndex = 0;
-        const focusableElements = document.querySelectorAll('.channel-card, .menu-item');
+
+        // Function to get all focusable elements
+        function getFocusableElements() {
+            return Array.from(document.querySelectorAll('.channel-card, .menu-item'));
+        }
 
         // Initialize focus on page load
         window.addEventListener('load', function() {
-            // Set focus to first channel card on page load
+            const focusableElements = getFocusableElements();
             if (focusableElements.length > 0) {
                 focusableElements[0].focus();
                 currentFocusIndex = 0;
@@ -1028,6 +961,7 @@
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 // Page is visible again, restore focus
+                const focusableElements = getFocusableElements();
                 if (focusableElements.length > 0 && currentFocusIndex >= 0 && currentFocusIndex < focusableElements.length) {
                     focusableElements[currentFocusIndex].focus();
                 }
@@ -1045,7 +979,7 @@
             card.addEventListener('mouseenter', function() {
                 // Clear any existing preview timer
                 if (currentPreviewTimer) {
-                    clearTimeout(currentPreviewTimer);
+                    clearInterval(currentPreviewTimer);
                 }
                 
                 // Stop previous preview if different card
@@ -1062,7 +996,7 @@
                 // Wait for iframe to load, then try to play video
                 iframe.onload = function() {
                     try {
-                        // Try to access the video element in the iframe and play it
+                        // Try to access video element in iframe and play it
                         setTimeout(() => {
                             try {
                                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1128,7 +1062,7 @@
             const iframe = card.querySelector('iframe');
             const timerElement = card.querySelector('.preview-timer');
             
-            // Clear the timer
+            // Clear timer
             if (currentPreviewTimer) {
                 clearInterval(currentPreviewTimer);
                 currentPreviewTimer = null;
@@ -1179,6 +1113,8 @@
                 return;
             }
             
+            const focusableElements = getFocusableElements();
+            
             switch(e.key) {
                 case 'ArrowRight':
                     e.preventDefault();
@@ -1194,18 +1130,18 @@
                     
                 case 'ArrowDown':
                     e.preventDefault();
-                    const nextRowElement = findNextRowElement(focusableElements[currentFocusIndex]);
+                    const nextRowElement = findNextRowElement(focusableElements[currentFocusIndex], focusableElements);
                     if (nextRowElement) {
-                        currentFocusIndex = Array.from(focusableElements).indexOf(nextRowElement);
+                        currentFocusIndex = focusableElements.indexOf(nextRowElement);
                         nextRowElement.focus();
                     }
                     break;
                     
                 case 'ArrowUp':
                     e.preventDefault();
-                    const prevRowElement = findPrevRowElement(focusableElements[currentFocusIndex]);
+                    const prevRowElement = findPrevRowElement(focusableElements[currentFocusIndex], focusableElements);
                     if (prevRowElement) {
-                        currentFocusIndex = Array.from(focusableElements).indexOf(prevRowElement);
+                        currentFocusIndex = focusableElements.indexOf(prevRowElement);
                         prevRowElement.focus();
                     }
                     break;
@@ -1227,14 +1163,14 @@
             }
         });
 
-        function findNextRowElement(currentElement) {
+        function findNextRowElement(currentElement, allElements) {
             const currentRect = currentElement.getBoundingClientRect();
             const currentCenterY = currentRect.top + currentRect.height / 2;
             
             let nextElement = null;
             let minDistance = Infinity;
             
-            focusableElements.forEach(element => {
+            allElements.forEach(element => {
                 if (element === currentElement) return;
                 
                 const rect = element.getBoundingClientRect();
@@ -1253,14 +1189,14 @@
             return nextElement;
         }
 
-        function findPrevRowElement(currentElement) {
+        function findPrevRowElement(currentElement, allElements) {
             const currentRect = currentElement.getBoundingClientRect();
             const currentCenterY = currentRect.top + currentRect.height / 2;
             
             let prevElement = null;
             let minDistance = Infinity;
             
-            focusableElements.forEach(element => {
+            allElements.forEach(element => {
                 if (element === currentElement) return;
                 
                 const rect = element.getBoundingClientRect();
