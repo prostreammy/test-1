@@ -94,6 +94,17 @@
             text-align: center;
             display: none;
         }
+        
+        /* Loading indicator */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -102,14 +113,15 @@
         <video data-shaka-player id="video"></video>
         <div id="watermark">SOOKA-EPL1</div>
         <div id="error-message"></div>
+        <div id="loading">Loading...</div>
     </div>
 
     <script>
         // Update manifest URI to the one from the HTTP request
         const manifestUri = 'https://l01.dp.sooka.my/5099/linear/index.mpd';
         
-        // Authorization token from the HTTP request
-        const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM0MzM5OTQsImlzcyI6IlZSIiwiZXhwIjoxNzYzNTA1MDAwLCJ3bXZlciI6Mywid21pZGZtdCI6ImFzY2lpIiwid21pZHR5cCI6MSwid21rZXl2ZXIiOjMsIndtdG1pZHZlciI6NCwid21pZGxlbiI6NTEyLCJ3bW9waWQiOjMyLCJ3bWlkIjoiMTE1ZTY0NmMtYjI4ZC00N2Q0LTk2OWMtYmNmMzllMTliM2FjIiwiZmlsdGVyIjoiKHR5cGU9PVwidmlkZW9cIiYmRGlzcGxheUhlaWdodDw9MjE2MCl8fCh0eXBlPT1cImF1ZGlvXCImJmZvdXJDQyE9XCJhYy0zXCIpfHwodHlwZSE9XCJ2aWRlb1wiJiZ0eXBlIT1cImF1ZGlvXCIpIiwicGF0dGVybiI6IjUwOTkifQ.XwijoJyUm1JHmYY-fR_szADRe7Kd5K35D-PM7cnbsMI';
+        // Updated authorization token from the successful request
+        const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM0MzQ5NzIsImlzcyI6IlZSIiwiZXhwIjoxNzYzNTA1MDAwLCJ3bXZlciI6Mywid21pZGZtdCI6ImFzY2lpIiwid21pZHR5cCI6MSwid21rZXl2ZXIiOjMsIndtdG1pZHZlciI6NCwid21pZGxlbiI6NTEyLCJ3bW9waWQiOjMyLCJ3bWlkIjoiMTE1ZTY0NmMtYjI4ZC00N2Q0LTk2OWMtYmNmMzllMTliM2FjIiwiZmlsdGVyIjoiKHR5cGU9PVwidmlkZW9cIiYmRGlzcGxheUhlaWdodDw9MjE2MCl8fCh0eXBlPT1cImF1ZGlvXCImJmZvdXJDQyE9XCJhYy0zXCIpfHwodHlwZSE9XCJ2aWRlb1wiJiZ0eXBlIT1cImF1ZGlvXCIpIiwicGF0dGVybiI6IjUwOTkifQ.9uM4UXEEZ4eOtzm8sNDoiZ3Kx0jRuk9WasT1uQtxQDo';
 
         // --- Function to fix D-pad navigation ---
         function makeControlsFocusable() {
@@ -127,13 +139,24 @@
         // --- Function to show error message ---
         function showError(message) {
             const errorElement = document.getElementById('error-message');
+            const loadingElement = document.getElementById('loading');
+            
             errorElement.textContent = message;
             errorElement.style.display = 'block';
+            loadingElement.style.display = 'none';
             
-            // Hide error after 5 seconds
+            // Hide error after 10 seconds
             setTimeout(() => {
                 errorElement.style.display = 'none';
-            }, 5000);
+            }, 10000);
+        }
+
+        // --- Function to hide loading indicator ---
+        function hideLoading() {
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
         }
 
         // --- Function to unmute the video ---
@@ -162,16 +185,23 @@
                 // Add authorization header for all requests
                 request.headers['Authorization'] = authToken;
                 
-                // Add origin and referer headers to match the original request
+                // Add origin and referer headers to match the successful request
                 request.headers['Origin'] = 'https://sooka.my';
                 request.headers['Referer'] = 'https://sooka.my/';
                 
-                // Add other headers from the original request
+                // Add other headers from the successful request
                 request.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
                 request.headers['Accept'] = '*/*';
                 request.headers['Accept-Language'] = 'en-US,en;q=0.9,ms;q=0.8';
                 request.headers['Cache-Control'] = 'no-cache';
                 request.headers['Pragma'] = 'no-cache';
+                request.headers['sec-ch-ua'] = '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"';
+                request.headers['sec-ch-ua-mobile'] = '?0';
+                request.headers['sec-ch-ua-platform'] = '"Windows"';
+                request.headers['sec-fetch-dest'] = 'empty';
+                request.headers['sec-fetch-mode'] = 'cors';
+                request.headers['sec-fetch-site'] = 'same-site';
+                request.headers['Priority'] = 'u=1, i';
             });
 
             // Configure DRM with proper servers
@@ -191,11 +221,6 @@
                             audioRobustness: '150'
                         }
                     }
-                },
-                streaming: {
-                    // Set max resolution to 2160p as per JWT filter
-                    preferredVideoCodecs: ['avc1', 'hev1', 'vp9', 'av01'],
-                    preferredAudioCodecs: ['mp4a', 'ec-3']
                 }
             });
 
@@ -229,6 +254,7 @@
             
             // --- Add listener to unmute as soon as playback starts ---
             video.addEventListener('playing', () => {
+                hideLoading();
                 // A small delay to ensure the playback state is fully established
                 setTimeout(unmuteVideo, 500);
             });
@@ -243,6 +269,7 @@
 
             } catch (error) {
                 console.error('Error loading or playing video:', error);
+                hideLoading();
                 showError('Failed to load video: ' + error.message);
                 onPlayerError(error);
             }
@@ -257,14 +284,18 @@
             console.error('Error code', error.code, 'object', error); 
             let errorMessage = 'An error occurred';
             
-            if (error.code === 6000) {
+            if (error.code === 1001) {
                 errorMessage = 'Network error. Please check your connection.';
-            } else if (error.code === 6001) {
+            } else if (error.code === 1002) {
+                errorMessage = 'Request failed. The server may be blocking requests from this domain.';
+            } else if (error.code === 1003) {
                 errorMessage = 'Request timed out. Please try again.';
-            } else if (error.code === 6002) {
+            } else if (error.code === 1004) {
                 errorMessage = 'Response error. The server returned an error.';
-            } else if (error.code === 6003) {
+            } else if (error.code === 1005) {
                 errorMessage = 'Malformed response. The server returned invalid data.';
+            } else if (error.code === 1006) {
+                errorMessage = 'HTTP error. The server returned an HTTP error.';
             } else if (error.code === 6007) {
                 errorMessage = 'HTTP error. The server returned an HTTP error.';
             } else if (error.code === 6012) {
@@ -289,6 +320,7 @@
         
         function initFailed(errorEvent) { 
             console.error('❌ Unable to load the UI library!'); 
+            hideLoading();
             showError('Failed to load player. Please refresh the page.');
         }
 
@@ -303,6 +335,7 @@
             });
         } else {
             console.error('Browser not supported!');
+            hideLoading();
             showError('Your browser is not supported. Please try a modern browser.');
         }
 
