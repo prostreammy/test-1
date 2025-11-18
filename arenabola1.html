@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>SOOKA-EPL1(VIP)</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Google Fonts for a professional watermark font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+
+    <!-- Shaka Player UI compiled library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/shaka-player.ui.js"></script>
+    <!-- Shaka Player UI compiled library default CSS -->
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/controls.css">
+    <!-- Chromecast SDK -->
+    <script defer src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
+
+    <style>
+        /* 
+         * Set up the page to be full-screen with no margins.
+        */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden; /* Prevents scrollbars */
+        }
+
+        /* 
+         * Apply the full-screen layout directly to the Shaka container.
+        */
+        [data-shaka-player-container] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 
+         * The video element fills its container and scales responsively.
+        */
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* 
+         * --- Custom Watermark Styles ---
+        */
+        #watermark {
+            position: absolute;
+            top: 2vw;
+            left: 2vw;
+            z-index: 9999;
+            font-family: 'Roboto', sans-serif;
+            font-size: 3.5vw;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+            letter-spacing: 2px;
+        }
+
+        /* 
+         * --- Remote Control Focus Highlight ---
+        */
+        [data-shaka-player-container] *:focus {
+            outline: 2px solid #ffcc00 !important;
+            background-color: rgba(255, 204, 0, 0.2) !important;
+        }
+        
+        /* Ensure buttons are focusable and remove default browser focus rings */
+        [data-shaka-player-container] button {
+             -webkit-appearance: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div data-shaka-player-container>
+        <video data-shaka-player id="video"></video>
+        <div id="watermark">SOOKA-EPL1</div>
+    </div>
+
+    <script>
+        // Update manifest URI to the one from the HTTP request
+        const manifestUri = 'https://l01.dp.sooka.my/5099/linear/index.mpd';
+        
+        // Authorization token from the HTTP request
+        const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM0MzM5OTQsImlzcyI6IlZSIiwiZXhwIjoxNzYzNTA1MDAwLCJ3bXZlciI6Mywid21pZGZtdCI6ImFzY2lpIiwid21pZHR5cCI6MSwid21rZXl2ZXIiOjMsIndtdG1pZHZlciI6NCwid21pZGxlbiI6NTEyLCJ3bW9waWQiOjMyLCJ3bWlkIjoiMTE1ZTY0NmMtYjI4ZC00N2Q0LTk2OWMtYmNmMzllMTliM2FjIiwiZmlsdGVyIjoiKHR5cGU9PVwidmlkZW9cIiYmRGlzcGxheUhlaWdodDw9MjE2MCl8fCh0eXBlPT1cImF1ZGlvXCImJmZvdXJDQyE9XCJhYy0zXCIpfHwodHlwZSE9XCJ2aWRlb1wiJiZ0eXBlIT1cImF1ZGlvXCIpIiwicGF0dGVybiI6IjUwOTkifQ.XwijoJyUm1JHmYY-fR_szADRe7Kd5K35D-PM7cnbsMI';
+
+        // --- Function to fix D-pad navigation ---
+        function makeControlsFocusable() {
+            console.log('🎯 Making controls focusable for D-pad navigation...');
+            const container = document.querySelector('[data-shaka-player-container]');
+            if (!container) return;
+
+            const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
+            focusableElements.forEach(el => {
+                el.setAttribute('tabindex', '0');
+            });
+            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
+        }
+
+        // --- NEW: Function to unmute the video ---
+        function unmuteVideo() {
+            const video = document.getElementById('video');
+            if (video.muted && video.readyState > 2) { // Only unmute if video is loaded
+                video.muted = false;
+                console.log('🔊 Video has been unmuted.');
+                // Remove the listener after it successfully unmutes
+                document.removeEventListener('keydown', unmuteVideo);
+            }
+        }
+
+        async function init() {
+            const video = document.getElementById('video');
+            const ui = video['ui'];
+            const controls = ui.getControls();
+            const player = controls.getPlayer();
+
+            // --- FIX: Start muted to allow autoplay, then unmute ---
+            video.muted = true;
+
+            // Create a networking engine to add custom headers
+            const networkingEngine = player.getNetworkingEngine();
+            networkingEngine.registerRequestFilter((type, request) => {
+                // Add authorization header for manifest and segment requests
+                request.headers['Authorization'] = authToken;
+                // Add origin header to match the original request
+                request.headers['Origin'] = 'https://sooka.my';
+                // Add referer header to match the original request
+                request.headers['Referer'] = 'https://sooka.my/';
+            });
+
+            // Configure DRM with robustness level
+            player.configure({
+                drm: {
+                    servers: {
+                        'com.widevine.alpha': 'https://l01.dp.sooka.my',
+                        'com.microsoft.playready': 'https://l01.dp.sooka.my'
+                    },
+                    advanced: {
+                        'com.widevine.alpha': {
+                            videoRobustness: 'SW_SECURE_CRYPTO',
+                            audioRobustness: 'SW_SECURE_CRYPTO'
+                        },
+                        'com.microsoft.playready': {
+                            videoRobustness: '150',
+                            audioRobustness: '150'
+                        }
+                    }
+                },
+                streaming: {
+                    // Set max resolution to 2160p as per JWT filter
+                    restrictions: {
+                        maxWidth: 3840,
+                        maxHeight: 2160
+                    }
+                }
+            });
+
+            ui.configure({
+                addBigPlayButton: true,
+                singleClickForPlayAndPause: false,
+                enableTooltips: false,
+                doubleClickForFullscreen: false,
+
+                controlPanelElements: [
+                    'play_pause',
+                    'time_and_duration',
+                    'spacer',
+                    'overflow_menu',
+                    'fullscreen',
+                ],
+                overflowMenuButtons: [
+                    'captions',
+                    'quality',
+                    'language',
+                    'picture_in_picture',
+                    'playback_rate',
+                ],
+            });
+
+            window.player = player;
+            window.ui = ui;
+
+            player.addEventListener('error', onPlayerErrorEvent);
+            controls.addEventListener('error', onUIErrorEvent);
+            
+            // --- Add listener to unmute as soon as playback starts ---
+            video.addEventListener('playing', () => {
+                // A small delay to ensure the playback state is fully established
+                setTimeout(unmuteVideo, 500);
+            });
+
+            try {
+                await player.load(manifestUri);
+                console.log('✅ The video has now been loaded!');
+                
+                await player.play();
+                console.log('✅ Autoplay started (muted). Will unmute shortly.');
+
+            } catch (error) {
+                onPlayerError(error);
+            }
+        }
+
+        function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function onPlayerError(error) { 
+            console.error('Error code', error.code, 'object', error); 
+            // Don't unmute if there's an error
+            const video = document.getElementById('video');
+            if (video) {
+                video.removeEventListener('playing', unmuteVideo);
+                document.removeEventListener('keydown', unmuteVideo);
+            }
+        }
+        function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
+
+        // Install shaka-player polyfills
+        shaka.polyfill.installAll();
+
+        // Check if Shaka Player is supported
+        if (shaka.Player.isBrowserSupported()) {
+            document.addEventListener('shaka-ui-loaded', () => {
+                init();
+                makeControlsFocusable();
+            });
+        } else {
+            console.error('Browser not supported!');
+        }
+
+        // --- NEW: Add a fallback to unmute on any remote button press ---
+        document.addEventListener('keydown', unmuteVideo);
+
+        document.addEventListener('shaka-ui-load-failed', initFailed);
+    </script>
+
+</body>
+</html>
