@@ -1,349 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>SOOKA-EPL1(VIP)</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Google Fonts for a professional watermark font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
-
-    <!-- Shaka Player UI compiled library -->
-    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/shaka-player.ui.js"></script>
-    <!-- Shaka Player UI compiled library default CSS -->
-    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/controls.css">
-    <!-- Chromecast SDK -->
-    <script defer src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sooka DASH Stream Player (Shaka - Debug)</title>
     <style>
-        /* 
-         * Set up the page to be full-screen with no margins.
-        */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-            overflow: hidden; /* Prevents scrollbars */
-        }
-
-        /* 
-         * Apply the full-screen layout directly to the Shaka container.
-        */
-        [data-shaka-player-container] {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* 
-         * The video element fills its container and scales responsively.
-        */
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        /* 
-         * --- Custom Watermark Styles ---
-        */
-        #watermark {
-            position: absolute;
-            top: 2vw;
-            left: 2vw;
-            z-index: 9999;
-            font-family: 'Roboto', sans-serif;
-            font-size: 3.5vw;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.6);
-            pointer-events: none;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
-            letter-spacing: 2px;
-        }
-
-        /* 
-         * --- Remote Control Focus Highlight ---
-        */
-        [data-shaka-player-container] *:focus {
-            outline: 2px solid #ffcc00 !important;
-            background-color: rgba(255, 204, 0, 0.2) !important;
-        }
-        
-        /* Ensure buttons are focusable and remove default browser focus rings */
-        [data-shaka-player-container] button {
-             -webkit-appearance: none;
-        }
-        
-        /* Error message styling */
-        #error-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            max-width: 80%;
-            text-align: center;
-            display: none;
-        }
-        
-        /* Loading indicator */
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 24px;
-            display: block;
-        }
+        body { font-family: Arial, sans-serif; background-color: #282c34; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .main-container { width: 100%; max-width: 1000px; }
+        .video-container { width: 100%; aspect-ratio: 16 / 9; background-color: #000; box-shadow: 0 0 20px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        video { width: 100%; height: 100%; }
+        .debug-container { background-color: #1c1e26; border: 1px solid #444; border-radius: 5px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; color: #ccc; max-height: 250px; overflow-y: auto; }
+        .debug-log { margin: 0; padding: 2px 0; }
+        .debug-log.info { color: #61dafb; }
+        .debug-log.error { color: #ff6b6b; font-weight: bold; }
+        .debug-log.success { color: #51cf66; }
+        .debug-log.warn { color: #ffd43b; }
     </style>
 </head>
 <body>
-
-    <div data-shaka-player-container>
-        <video data-shaka-player id="video"></video>
-        <div id="watermark">SOOKA-EPL1</div>
-        <div id="error-message"></div>
-        <div id="loading">Loading...</div>
+    <div class="main-container">
+        <div class="video-container">
+            <video id="videoPlayer" controls></video>
+        </div>
+        <div class="debug-container">
+            <h3 style="margin-top:0;">Debug Status</h3>
+            <div id="debugLog"></div>
+        </div>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/shaka-player@latest/dist/shaka-player.ui.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@latest/dist/controls.css">
     <script>
-        // Update manifest URI to the one from the HTTP request
-        const manifestUri = 'https://l01.dp.sooka.my/5099/linear/index.mpd';
-        
-        // Updated authorization token from the successful request
-        const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM0MzQ5NzIsImlzcyI6IlZSIiwiZXhwIjoxNzYzNTA1MDAwLCJ3bXZlciI6Mywid21pZGZtdCI6ImFzY2lpIiwid21pZHR5cCI6MSwid21rZXl2ZXIiOjMsIndtdG1pZHZlciI6NCwid21pZGxlbiI6NTEyLCJ3bW9waWQiOjMyLCJ3bWlkIjoiMTE1ZTY0NmMtYjI4ZC00N2Q0LTk2OWMtYmNmMzllMTliM2FjIiwiZmlsdGVyIjoiKHR5cGU9PVwidmlkZW9cIiYmRGlzcGxheUhlaWdodDw9MjE2MCl8fCh0eXBlPT1cImF1ZGlvXCImJmZvdXJDQyE9XCJhYy0zXCIpfHwodHlwZSE9XCJ2aWRlb1wiJiZ0eXBlIT1cImF1ZGlvXCIpIiwicGF0dGVybiI6IjUwOTkifQ.9uM4UXEEZ4eOtzm8sNDoiZ3Kx0jRuk9WasT1uQtxQDo';
-
-        // --- Function to fix D-pad navigation ---
-        function makeControlsFocusable() {
-            console.log('🎯 Making controls focusable for D-pad navigation...');
-            const container = document.querySelector('[data-shaka-player-container]');
-            if (!container) return;
-
-            const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
-            focusableElements.forEach(el => {
-                el.setAttribute('tabindex', '0');
-            });
-            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
-        }
-
-        // --- Function to show error message ---
-        function showError(message) {
-            const errorElement = document.getElementById('error-message');
-            const loadingElement = document.getElementById('loading');
-            
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-            loadingElement.style.display = 'none';
-            
-            // Hide error after 10 seconds
-            setTimeout(() => {
-                errorElement.style.display = 'none';
-            }, 10000);
-        }
-
-        // --- Function to hide loading indicator ---
-        function hideLoading() {
-            const loadingElement = document.getElementById('loading');
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
+        document.addEventListener('DOMContentLoaded', async function () {
+            const debugLog = document.getElementById('debugLog');
+            function log(message, type = 'info') {
+                const logEntry = document.createElement('p');
+                logEntry.className = `debug-log ${type}`;
+                logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                debugLog.appendChild(logEntry);
+                debugLog.scrollTop = debugLog.scrollHeight;
+                console.log(message);
             }
-        }
 
-        // --- Function to unmute the video ---
-        function unmuteVideo() {
-            const video = document.getElementById('video');
-            if (video.muted && video.readyState > 2) { // Only unmute if video is loaded
-                video.muted = false;
-                console.log('🔊 Video has been unmuted.');
-                // Remove the listener after it successfully unmutes
-                document.removeEventListener('keydown', unmuteVideo);
-            }
-        }
+            const mpdUrl = 'https://l01.dp.sooka.my/5099/linear/index.mpd';
+            const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM0MzQ5NzIsImlzcyI6IlZSIiwiZXhwIjoxNzYzNTA1MDAwLCJ3bXZlciI6Mywid21pZGZtdCI6ImFzY2lpIiwid21pZHR5cCI6MSwid21rZXl2ZXIiOjMsIndtdG1pZHZlciI6NCwid21pZGxlbiI6NTEyLCJ3bW9waWQiOjMyLCJ3bWlkIjoiMTE1ZTY0NmMtYjI4ZC00N2Q0LTk2OWMtYmNmMzllMTliM2FjIiwiZmlsdGVyIjoiKHR5cGU9PVwidmlkZW9cIiYmRGlzcGxheUhlaWdodDw9MjE2MCl8fCh0eXBlPT1cImF1ZGlvXCImJmZvdXJDQyE9XCJhYy0zXCIpfHwodHlwZSE9XCJ2aWRlb1wiJiZ0eXBlIT1cImF1ZGlvXCIpIiwicGF0dGVybiI6IjUwOTkifQ.9uM4UXEEZ4eOtzm8sNDoiZ3Kx0jRuk9WasT1uQtxQDo';
 
-        async function init() {
-            const video = document.getElementById('video');
-            const ui = video['ui'];
-            const controls = ui.getControls();
-            const player = controls.getPlayer();
-
-            // --- FIX: Start muted to allow autoplay, then unmute ---
-            video.muted = true;
-
-            // Create a networking engine to add custom headers
-            const networkingEngine = player.getNetworkingEngine();
-            networkingEngine.registerRequestFilter((type, request) => {
-                // Add authorization header for all requests
-                request.headers['Authorization'] = authToken;
-                
-                // Add origin and referer headers to match the successful request
-                request.headers['Origin'] = 'https://sooka.my';
-                request.headers['Referer'] = 'https://sooka.my/';
-                
-                // Add other headers from the successful request
-                request.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
-                request.headers['Accept'] = '*/*';
-                request.headers['Accept-Language'] = 'en-US,en;q=0.9,ms;q=0.8';
-                request.headers['Cache-Control'] = 'no-cache';
-                request.headers['Pragma'] = 'no-cache';
-                request.headers['sec-ch-ua'] = '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"';
-                request.headers['sec-ch-ua-mobile'] = '?0';
-                request.headers['sec-ch-ua-platform'] = '"Windows"';
-                request.headers['sec-fetch-dest'] = 'empty';
-                request.headers['sec-fetch-mode'] = 'cors';
-                request.headers['sec-fetch-site'] = 'same-site';
-                request.headers['Priority'] = 'u=1, i';
-            });
-
-            // Configure DRM with proper servers
-            player.configure({
-                drm: {
-                    servers: {
-                        'com.widevine.alpha': 'https://l01.dp.sooka.my/',
-                        'com.microsoft.playready': 'https://l01.dp.sooka.my/'
-                    },
-                    advanced: {
-                        'com.widevine.alpha': {
-                            videoRobustness: 'SW_SECURE_CRYPTO',
-                            audioRobustness: 'SW_SECURE_CRYPTO'
-                        },
-                        'com.microsoft.playready': {
-                            videoRobustness: '150',
-                            audioRobustness: '150'
-                        }
-                    }
-                }
-            });
-
-            ui.configure({
-                addBigPlayButton: true,
-                singleClickForPlayAndPause: false,
-                enableTooltips: false,
-                doubleClickForFullscreen: false,
-
-                controlPanelElements: [
-                    'play_pause',
-                    'time_and_duration',
-                    'spacer',
-                    'overflow_menu',
-                    'fullscreen',
-                ],
-                overflowMenuButtons: [
-                    'captions',
-                    'quality',
-                    'language',
-                    'picture_in_picture',
-                    'playback_rate',
-                ],
-            });
-
-            window.player = player;
-            window.ui = ui;
-
-            player.addEventListener('error', onPlayerErrorEvent);
-            controls.addEventListener('error', onUIErrorEvent);
-            
-            // --- Add listener to unmute as soon as playback starts ---
-            video.addEventListener('playing', () => {
-                hideLoading();
-                // A small delay to ensure the playback state is fully established
-                setTimeout(unmuteVideo, 500);
-            });
+            const videoElement = document.getElementById('videoPlayer');
 
             try {
-                await player.load(manifestUri);
-                console.log('✅ The video has now been loaded!');
-                
-                // Use the controls to play instead of directly calling player.play()
-                await controls.play();
-                console.log('✅ Autoplay started (muted). Will unmute shortly.');
+                log('Initializing Shaka Player...');
+                if (!shaka.Player.isBrowserSupported()) throw new Error('Browser does not support Shaka Player.');
+                const player = new shaka.Player(videoElement);
+                log('Shaka Player instance created.');
+
+                // Configure networking for retries and timeouts
+                player.configure('streaming.retryParameters', {
+                    timeout: 0, /* ms; 0 = infinity */
+                    maxAttempts: 5,
+                    baseDelay: 1000, /* ms */
+                    backoffFactor: 2,
+                    fuzzFactor: 0.5
+                });
+                log('Retry parameters configured.');
+
+
+                player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        request.headers['Authorization'] = authToken;
+                        request.headers['Origin'] = 'https://sooka.my';
+                        request.headers['Referer'] = 'https://sooka.my/';
+                    }
+                });
+                log('Request filter registered.');
+
+                player.addEventListener('error', (errorEvent) => {
+                    const error = errorEvent.detail;
+                    let errorMessage = `Player Error: ${error.code} - ${error.message}`;
+                    
+                    // Get more detail for HTTP errors
+                    if (error.code === shaka.util.Error.Code.HTTP_ERROR) {
+                        const statusCode = error.data[1]; // The HTTP status code is the second element in the data array
+                        errorMessage += ` (HTTP ${statusCode})`;
+                        if (statusCode === 401) {
+                            errorMessage += ' -> This usually means the token has expired.';
+                        } else if (statusCode === 403) {
+                            errorMessage += ' -> This might mean the Origin/Referer is blocked.';
+                        } else if (statusCode === 404) {
+                            errorMessage += ' -> The requested segment was not found on the server.';
+                        }
+                    }
+                    log(errorMessage, 'error');
+                });
+
+                log(`Attempting to load stream: ${mpdUrl}`);
+                await player.load(mpdUrl);
+                log('Stream loaded successfully!', 'success');
 
             } catch (error) {
-                console.error('Error loading or playing video:', error);
-                hideLoading();
-                showError('Failed to load video: ' + error.message);
-                onPlayerError(error);
+                log(`Failed to start player: ${error.message}`, 'error');
+                videoElement.style.display = 'none';
             }
-        }
-
-        function onPlayerErrorEvent(errorEvent) { 
-            const error = errorEvent.detail;
-            onPlayerError(error); 
-        }
-        
-        function onPlayerError(error) { 
-            console.error('Error code', error.code, 'object', error); 
-            let errorMessage = 'An error occurred';
-            
-            if (error.code === 1001) {
-                errorMessage = 'Network error. Please check your connection.';
-            } else if (error.code === 1002) {
-                errorMessage = 'Request failed. The server may be blocking requests from this domain.';
-            } else if (error.code === 1003) {
-                errorMessage = 'Request timed out. Please try again.';
-            } else if (error.code === 1004) {
-                errorMessage = 'Response error. The server returned an error.';
-            } else if (error.code === 1005) {
-                errorMessage = 'Malformed response. The server returned invalid data.';
-            } else if (error.code === 1006) {
-                errorMessage = 'HTTP error. The server returned an HTTP error.';
-            } else if (error.code === 6007) {
-                errorMessage = 'HTTP error. The server returned an HTTP error.';
-            } else if (error.code === 6012) {
-                errorMessage = 'License request failed. This might be due to DRM restrictions.';
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            showError(errorMessage);
-            
-            // Don't unmute if there's an error
-            const video = document.getElementById('video');
-            if (video) {
-                video.removeEventListener('playing', unmuteVideo);
-                document.removeEventListener('keydown', unmuteVideo);
-            }
-        }
-        
-        function onUIErrorEvent(errorEvent) { 
-            onPlayerError(errorEvent.detail); 
-        }
-        
-        function initFailed(errorEvent) { 
-            console.error('❌ Unable to load the UI library!'); 
-            hideLoading();
-            showError('Failed to load player. Please refresh the page.');
-        }
-
-        // Install shaka-player polyfills
-        shaka.polyfill.installAll();
-
-        // Check if Shaka Player is supported
-        if (shaka.Player.isBrowserSupported()) {
-            document.addEventListener('shaka-ui-loaded', () => {
-                init();
-                makeControlsFocusable();
-            });
-        } else {
-            console.error('Browser not supported!');
-            hideLoading();
-            showError('Your browser is not supported. Please try a modern browser.');
-        }
-
-        // --- NEW: Add a fallback to unmute on any remote button press ---
-        document.addEventListener('keydown', unmuteVideo);
-
-        document.addEventListener('shaka-ui-load-failed', initFailed);
+        });
     </script>
-
 </body>
 </html>
