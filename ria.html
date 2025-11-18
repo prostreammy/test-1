@@ -1,592 +1,504 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Shaka Player with Debugging</title>
-    
-    <!-- Shaka Player compiled library -->
-    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.7.1/shaka-player.ui.js"></script>
-    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.7.1/shaka-player.css">
-    
-    <!-- Material Design Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    
-    <!-- Material Design Lite -->
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,500" rel="stylesheet">
-    
+    <title>PROSTREAM-ASTRO-RIA(VIP)</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Google Fonts for a professional watermark font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+
+    <!-- Shaka Player UI compiled library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/shaka-player.ui.js"></script>
+    <!-- Shaka Player UI compiled library default CSS -->
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/controls.css">
+    <!-- Chromecast SDK -->
+    <script defer src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
+
     <style>
-        body {
-            font-family: Roboto, Arial, sans-serif;
+        html, body {
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .video-container {
-            position: relative;
             width: 100%;
+            height: 100%;
             background-color: #000;
-            margin-bottom: 20px;
+            overflow: hidden;
         }
-        
-        video {
+
+        [data-shaka-player-container] {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: auto;
-            display: block;
+            height: 100%;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #watermark {
+            position: absolute;
+            top: 2vw;
+            left: 2vw;
+            z-index: 9999;
+            font-family: 'Roboto', sans-serif;
+            font-size: 3.5vw;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+            letter-spacing: 2px;
+        }
+
+        [data-shaka-player-container] *:focus {
+            outline: 2px solid #ffcc00 !important;
+            background-color: rgba(255, 204, 0, 0.2) !important;
         }
         
-        .controls {
+        [data-shaka-player-container] button {
+             -webkit-appearance: none;
+        }
+
+        /* Loading overlay styles */
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .control-button {
-            padding: 8px 16px;
-            background-color: #4285f4;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
+            transition: opacity 0.7s ease;
         }
-        
-        .control-button:hover {
-            background-color: #3367d6;
+
+        #loading-overlay.fade-out {
+            opacity: 0;
         }
-        
-        .debug-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        
-        .debug-panel {
-            flex: 1;
-            min-width: 300px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .debug-panel h3 {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        
-        .debug-content {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 12px;
-            max-height: 300px;
-            overflow-y: auto;
-            background-color: #f8f8f8;
-            padding: 10px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            margin-right: 5px;
-        }
-        
-        .status-good {
-            background-color: #4caf50;
-        }
-        
-        .status-warning {
-            background-color: #ff9800;
-        }
-        
-        .status-error {
-            background-color: #f44336;
-        }
-        
-        .config-form {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 15px;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
             margin-bottom: 20px;
         }
-        
-        .form-group {
-            margin-bottom: 15px;
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .form-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .tab-container {
+
+        #loading-text {
+            font-family: 'Roboto', sans-serif;
+            font-size: 1.2rem;
+            text-align: center;
             margin-bottom: 20px;
         }
-        
-        .tab-buttons {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .tab-button {
-            padding: 10px 15px;
-            background: none;
+
+        #retry-button {
+            background-color: #ffcc00;
+            color: #000;
             border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: bold;
             cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        
-        .tab-button.active {
-            border-bottom: 2px solid #4285f4;
-            font-weight: 500;
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 15px 0;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .error-message {
-            background-color: #ffebee;
-            color: #c62828;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
             display: none;
         }
-        
-        .warning-message {
-            background-color: #fff3e0;
-            color: #ef6c00;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
+
+        #retry-button:hover {
+            background-color: #ff9900;
+        }
+
+        /* 
+         * --- Caption Styling ---
+        */
+        [data-shaka-player-container] .shaka-text-container {
+            position: absolute !important;
+            top: 85% !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 70% !important;
+            text-align: center !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            z-index: 10 !important;
+
+            /* Clamp to 2 lines */
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+        }
+
+        [data-shaka-player-container] .shaka-text-container span {
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            padding: 0.2em 0.5em !important;
+            border-radius: 0.2em !important;
+            font-size: 2.5vh !important;
+            line-height: 1.4 !important;
+            white-space: pre-wrap !important;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Shaka Player with Debugging</h1>
-        
-        <div class="warning-message">
-            <strong>CORS Warning:</strong> This player may not work when opened directly from the file system due to CORS restrictions. 
-            Please serve this file from a web server (like Python's http.server or Node.js http-server) with the same domain as the stream or use a browser extension to bypass CORS.
-        </div>
-        
-        <div class="error-message" id="errorMessage"></div>
-        
-        <div class="config-form">
-            <h3>Stream Configuration</h3>
-            <div class="form-group">
-                <label for="mpdUrl">MPD URL:</label>
-                <input type="text" id="mpdUrl" value="https://load.perfecttv.net/rwt.mpd?username=vip_3klp0es8&password=wg3piwEs&channel=riahd">
-            </div>
-            <div class="form-group">
-                <label for="origin">Origin:</label>
-                <input type="text" id="origin" value="https://wcc.cam/edge">
-            </div>
-            <div class="form-group">
-                <label for="device">X-PTV-Device:</label>
-                <input type="text" id="device" value="bd0e7d89254a0d9d">
-            </div>
-            <div class="form-group">
-                <label for="userAgent">User-Agent:</label>
-                <input type="text" id="userAgent" value="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36">
-            </div>
-            <button class="control-button" id="loadStream">Load Stream</button>
-            <button class="control-button" id="clearErrors">Clear Errors</button>
-        </div>
-        
-        <div class="video-container">
-            <video id="video" controls></video>
-        </div>
-        
-        <div class="controls">
-            <button class="control-button" id="play">Play</button>
-            <button class="control-button" id="pause">Pause</button>
-            <button class="control-button" id="mute">Mute/Unmute</button>
-            <button class="control-button" id="fullscreen">Fullscreen</button>
-            <button class="control-button" id="toggleDebug">Toggle Debug</button>
-            <button class="control-button" id="reload">Reload</button>
-        </div>
-        
-        <div class="tab-container">
-            <div class="tab-buttons">
-                <button class="tab-button active" data-tab="player-info">Player Info</button>
-                <button class="tab-button" data-tab="network-activity">Network Activity</button>
-                <button class="tab-button" data-tab="event-log">Event Log</button>
-                <button class="tab-button" data-tab="manifest-info">Manifest Info</button>
-            </div>
-            
-            <div class="tab-content active" id="player-info">
-                <div class="debug-panel">
-                    <h3>Player Status</h3>
-                    <div class="debug-content" id="playerStatus">Initializing...</div>
-                </div>
-                
-                <div class="debug-panel">
-                    <h3>Buffer Info</h3>
-                    <div class="debug-content" id="bufferInfo">Waiting for data...</div>
-                </div>
-                
-                <div class="debug-panel">
-                    <h3>Adaptation Info</h3>
-                    <div class="debug-content" id="adaptationInfo">Waiting for data...</div>
-                </div>
-            </div>
-            
-            <div class="tab-content" id="network-activity">
-                <div class="debug-panel">
-                    <h3>Network Requests</h3>
-                    <div class="debug-content" id="networkRequests">No network activity yet...</div>
-                </div>
-            </div>
-            
-            <div class="tab-content" id="event-log">
-                <div class="debug-panel">
-                    <h3>Event Log</h3>
-                    <div class="debug-content" id="eventLog">No events yet...</div>
-                </div>
-            </div>
-            
-            <div class="tab-content" id="manifest-info">
-                <div class="debug-panel">
-                    <h3>Manifest Details</h3>
-                    <div class="debug-content" id="manifestDetails">No manifest loaded yet...</div>
-                </div>
-            </div>
-        </div>
+
+    <div data-shaka-player-container>
+        <video data-shaka-player id="video"></video>
+        <div id="watermark">PROSTREAM-RIA</div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Sila tunggu beberapa saat..</div>
+        <button id="retry-button" onclick="retryStream()">Cuba Lagi</button>
     </div>
 
     <script>
-        // Check browser compatibility
-        if (!shaka.Player.isBrowserSupported()) {
-            showError('Your browser does not support Shaka Player. Please try a modern browser like Chrome, Firefox, or Edge.');
+        // Channel configuration
+        const channel = "astro-ria";
+        const streamURL = "https://l16.dp.sooka.my/1004/linear/index.mpd";
+        const proxyUrl =
+          "https://script.google.com/macros/s/AKfycbyXIJGv8aTWAqkpTnzxrZp5RO-OnZC-JjHtbd9xFn0mc4gyrYShs01zEOO18XDG5iqE/exec?key=riatvmalaysia&channel=" +
+          channel;
+
+        // DOM elements
+        const loadingOverlay = document.getElementById("loading-overlay");
+        const loadingText = document.getElementById("loading-text");
+        const spinner = document.querySelector(".spinner");
+        const retryButton = document.getElementById("retry-button");
+
+        // Helper functions
+        function shuffleArray(array) {
+          let shuffled = [...array];
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          return shuffled;
         }
 
-        // Initialize Shaka Player with new API
-        const video = document.getElementById('video');
-        const player = new shaka.Player();
-        
-        // Attach to video element
-        player.attach(video).catch(error => {
-            showError('Failed to attach player to video element: ' + error.message);
-        });
-        
-        // Debug variables
-        let debugVisible = true;
-        let networkRequests = [];
-        let eventLog = [];
-        
-        // UI elements
-        const playerStatusEl = document.getElementById('playerStatus');
-        const bufferInfoEl = document.getElementById('bufferInfo');
-        const adaptationInfoEl = document.getElementById('adaptationInfo');
-        const networkRequestsEl = document.getElementById('networkRequests');
-        const eventLogEl = document.getElementById('eventLog');
-        const manifestDetailsEl = document.getElementById('manifestDetails');
-        const errorMessageEl = document.getElementById('errorMessage');
-        
-        // Tab functionality
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', () => {
-                const tabName = button.getAttribute('data-tab');
-                
-                // Update button states
-                document.querySelectorAll('.tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                button.classList.add('active');
-                
-                // Update content visibility
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(tabName).classList.add('active');
+        async function getTokenList() {
+          try {
+            // Add mode=no-cors to bypass CORS for development
+            const res = await fetch(proxyUrl + "&t=" + Date.now(), { 
+              cache: "no-store",
+              mode: 'cors'
             });
-        });
+            const data = await res.json();
+            if (!data.ok) throw new Error("Proxy invalid");
+            let tokens = [];
+            if (Array.isArray(data.record)) {
+              tokens = data.record.map((i) => i?.data?.token).filter(Boolean);
+            } else if (data.token) {
+              tokens = [data.token];
+            }
+            tokens = shuffleArray(tokens);
+            console.log(`🎫 ${tokens.length} token diterima`);
+            return tokens;
+          } catch (err) {
+            console.error("❌ Gagal ambil token:", err);
+            return [];
+          }
+        }
+
+        function getCachedToken() {
+          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
+          return localStorage.getItem(key) || "";
+        }
         
-        // Custom request filter to add headers
-        const requestFilter = (requestType, request) => {
-            // Add custom headers for all requests
-            request.headers['Origin'] = document.getElementById('origin').value;
-            request.headers['X-PTV-Device'] = document.getElementById('device').value;
-            request.headers['User-Agent'] = document.getElementById('userAgent').value;
-            
-            // Log network requests
-            const timestamp = new Date().toISOString();
-            const logEntry = `[${timestamp}] ${requestType}: ${request.uris[0]}`;
-            networkRequests.push(logEntry);
-            updateNetworkRequests();
-            
-            return request;
-        };
+        function setCachedToken(token) {
+          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
+          localStorage.setItem(key, token);
+          console.log(`💾 Cache token ${channel}: ${token.substring(0, 25)}...`);
+        }
         
-        // Custom response filter to log responses
-        const responseFilter = (requestType, response) => {
-            const timestamp = new Date().toISOString();
-            const logEntry = `[${timestamp}] Response: ${response.uri} (Status: ${response.status || 'N/A'})`;
-            networkRequests.push(logEntry);
-            updateNetworkRequests();
-            
-            return response;
-        };
-        
-        // Install the filters
-        player.getNetworkingEngine().registerRequestFilter(requestFilter);
-        player.getNetworkingEngine().registerResponseFilter(responseFilter);
-        
-        // Event listeners
-        player.addEventListener('loading', () => {
-            logEvent('Loading started');
-            updatePlayerStatus();
-        });
-        
-        player.addEventListener('loaded', () => {
-            logEvent('Manifest loaded');
-            updatePlayerStatus();
-            updateManifestInfo();
-        });
-        
-        player.addEventListener('error', (error) => {
-            logEvent(`Error: ${error.detail}`);
-            showError(`Player error: ${error.detail}`);
-            updatePlayerStatus();
-        });
-        
-        player.addEventListener('buffering', () => {
-            logEvent('Buffering state changed');
-            updatePlayerStatus();
-        });
-        
-        player.addEventListener('adaptation', () => {
-            logEvent('Adaptation event');
-            updateAdaptationInfo();
-        });
-        
-        // Update functions
-        function updatePlayerStatus() {
-            try {
-                const status = {
-                    'State': getPlayerState(),
-                    'Is Live': player.isLive(),
-                    'Duration': player.getDuration(),
-                    'Seek Range': player.getSeekRange(),
-                    'Play Rate': video.playbackRate,
-                    'Volume': video.volume,
-                    'Muted': video.muted,
-                    'Current Time': video.currentTime,
-                    'Paused': video.paused,
-                    'Ready State': video.readyState
-                };
-                
-                playerStatusEl.innerHTML = Object.entries(status)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join('\n');
-            } catch (e) {
-                playerStatusEl.textContent = `Error getting status: ${e.message}`;
+        function clearCachedToken() {
+          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
+          localStorage.removeItem(key);
+        }
+
+        function makeControlsFocusable() {
+            console.log('🎯 Making controls focusable for D-pad navigation...');
+            const container = document.querySelector('[data-shaka-player-container]');
+            if (!container) return;
+            const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
+            focusableElements.forEach(el => {
+                el.setAttribute('tabindex', '0');
+            });
+            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
+        }
+
+        function ensureFocus() {
+            const container = document.querySelector('[data-shaka-player-container]');
+            const overflowButton = document.querySelector('.shaka-overflow-menu-button');
+            if (container && overflowButton && !container.contains(document.activeElement)) {
+                overflowButton.focus();
             }
         }
         
-        function getPlayerState() {
-            // Since getState() is not available, infer state from video element
-            if (video.readyState === 0) return 'NOT_LOADED';
-            if (video.readyState < 3) return 'LOADING';
-            if (video.paused) return 'PAUSED';
-            return 'PLAYING';
+        function unmuteVideo() {
+            const video = document.getElementById('video');
+            if (video.muted) {
+                video.muted = false;
+                console.log('🔊 Video has been unmuted.');
+                document.removeEventListener('keydown', unmuteVideo);
+            }
         }
-        
-        function updateBufferInfo() {
+
+        function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function onPlayerError(error) { console.error('Error code', error.code, 'object', error); }
+        function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
+
+        async function initPlayer() {
+          spinner.style.display = "block";
+          loadingText.innerText = "Sila tunggu beberapa saat..";
+          retryButton.style.display = "none";
+          loadingOverlay.style.display = "flex";
+
+          const cachedToken = getCachedToken();
+          const tokens = await getTokenList();
+
+          const video = document.querySelector("video");
+          const ui = video["ui"];
+          const controls = ui.getControls();
+          let player = controls.getPlayer();
+
+          player.configure({
+            drm: {
+              clearKeys: {
+                "c15541e4dde34c48a0d144a4b0ab7194":"ce82e3d81126183e5a262e320f6348b3",
+                "d5249cb40505495494828f42c37087cb":"d59f6a7bed00bd5348355ab5b3ee6aa0",
+              },
+            },
+            streaming: {
+                lowLatencyMode: true,
+                // Remove invalid config option
+                // manifest: {
+                //     presentationTimelineDelay: 5,
+                // },
+                bufferBehind: 10,
+            },
+          });
+
+          // Configure UI with valid control panel elements
+          ui.configure({
+            addSeekBar: false,
+            addBigPlayButton: true,
+            singleClickForPlayAndPause: false,
+            enableTooltips: false,
+            doubleClickForFullscreen: false,
+
+            controlPanelElements: [
+              'play_pause',
+              // Remove invalid elements
+              // 'skip_previous',
+              // 'skip_next',
+              'spacer',
+              'overflow_menu',
+              'fullscreen',
+            ],
+            overflowMenuButtons: [
+              'captions',
+              'quality',
+              'language',
+              'chapter',
+              'picture_in_picture',
+              'playback_rate',
+              'recenter_vr',
+              'toggle_stereoscopic',
+            ],
+          });
+
+          // ✅ AUTO ENABLE SUBTITLE (for Sooka embedded subtitles)
+          player.setTextTrackVisibility(true);
+          player.addEventListener('trackschanged', () => {
+            player.setTextTrackVisibility(true);
+            console.log('🎬 Subtitle auto-enabled selepas track detected');
+            
+            // Check for caption tracks
+            const textTracks = player.getTextTracks();
+            const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
+
+            if (captionTrack) {
+                console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
+                player.selectTextTrack(captionTrack);
+                player.setTextTrackVisibility(true);
+                console.log('🎬 Caption track selected and enabled.');
+            } else {
+                console.log('🎬 No subtitle track found.');
+            }
+          });
+
+          // Setup event listeners
+          player.addEventListener('error', onPlayerErrorEvent);
+          controls.addEventListener('error', onUIErrorEvent);
+          
+          video.addEventListener('playing', () => {
+            setTimeout(unmuteVideo, 500);
+          });
+
+          async function tryToken(token, label) {
             try {
-                const bufferInfo = player.getBufferedInfo();
-                bufferInfoEl.innerHTML = JSON.stringify(bufferInfo, null, 2);
-            } catch (e) {
-                // Fallback to video buffered info
-                if (video.buffered.length > 0) {
-                    const ranges = [];
-                    for (let i = 0; i < video.buffered.length; i++) {
-                        ranges.push({
-                            start: video.buffered.start(i),
-                            end: video.buffered.end(i)
-                        });
-                    }
-                    bufferInfoEl.innerHTML = JSON.stringify(ranges, null, 2);
+              player.destroy().catch(() => {});
+              await new Promise((r) => setTimeout(r, 300));
+              player = new shaka.Player(video);
+              player.configure({
+                drm: {
+                  clearKeys: {
+                    "c15541e4dde34c48a0d144a4b0ab7194":"ce82e3d81126183e5a262e320f6348b3",
+                    "d5249cb40505495494828f42c37087cb":"d59f6a7bed00bd5348355ab5b3ee6aa0",
+                  },
+                },
+                streaming: {
+                    lowLatencyMode: true,
+                    // Remove invalid config option
+                    // manifest: {
+                    //     presentationTimelineDelay: 5,
+                    // },
+                    bufferBehind: 10,
+                },
+              });
+
+              // Register request filter (Authorization)
+              player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                if (
+                  type === shaka.net.NetworkingEngine.RequestType.MANIFEST ||
+                  type === shaka.net.NetworkingEngine.RequestType.SEGMENT
+                ) {
+                  request.headers["authorization"] = "Bearer " + token;
+                }
+              });
+
+              await player.load(streamURL);
+              console.log(`✅ Token (${label}) OK`);
+              setCachedToken(token);
+
+              loadingOverlay.classList.add("fade-out");
+              setTimeout(() => { loadingOverlay.style.display = "none"; }, 700);
+
+              // Pastikan subtitle kekal ON lepas load
+              player.setTextTrackVisibility(true);
+
+              // Reattach UI to new player
+              ui.configure({
+                addSeekBar: false,
+                addBigPlayButton: true,
+                singleClickForPlayAndPause: false,
+                enableTooltips: false,
+                doubleClickForFullscreen: false,
+
+                controlPanelElements: [
+                  'play_pause',
+                  // Remove invalid elements
+                  // 'skip_previous',
+                  // 'skip_next',
+                  'spacer',
+                  'overflow_menu',
+                  'fullscreen',
+                ],
+                overflowMenuButtons: [
+                  'captions',
+                  'quality',
+                  'language',
+                  'chapter',
+                  'picture_in_picture',
+                  'playback_rate',
+                  'recenter_vr',
+                  'toggle_stereoscopic',
+                ],
+              });
+
+              // Setup event listeners for new player
+              player.addEventListener('error', onPlayerErrorEvent);
+              player.addEventListener('trackschanged', () => {
+                player.setTextTrackVisibility(true);
+                console.log('🎬 Subtitle auto-enabled selepas track detected');
+                
+                // Check for caption tracks
+                const textTracks = player.getTextTracks();
+                const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
+
+                if (captionTrack) {
+                    console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
+                    player.selectTextTrack(captionTrack);
+                    player.setTextTrackVisibility(true);
+                    console.log('🎬 Caption track selected and enabled.');
                 } else {
-                    bufferInfoEl.textContent = 'No buffered data';
+                    console.log('🎬 No subtitle track found.');
                 }
+              });
+
+              // Fix: Use video.play() instead of player.play()
+              try {
+                await video.play();
+                console.log('✅ Autoplay started (muted). Will unmute shortly.');
+              } catch (error) {
+                console.error('Error starting playback:', error);
+              }
+
+              return true;
+            } catch (err) {
+              console.warn(`⚠️ Token (${label}) gagal: ${err.message}`);
+              return false;
             }
+          }
+
+          if (cachedToken) {
+            const ok = await tryToken(cachedToken, "cached");
+            if (ok) return;
+            clearCachedToken();
+          }
+
+          for (let i = 0; i < tokens.length; i++) {
+            const ok = await tryToken(tokens[i], `list ke-${i + 1}`);
+            if (ok) return;
+          }
+
+          console.error("😢 Semua token gagal.");
+          spinner.style.display = "none";
+          loadingText.innerText = "Maaf, siaran ini bermasalah sekarang.";
+          retryButton.style.display = "inline-block";
         }
-        
-        function updateAdaptationInfo() {
-            try {
-                const tracks = player.getVariantTracks();
-                const currentTrack = tracks.find(track => track.active);
-                
-                if (currentTrack) {
-                    adaptationInfoEl.innerHTML = `
-Current Track:
-  ID: ${currentTrack.id}
-  Bandwidth: ${currentTrack.bandwidth}
-  Video Codec: ${currentTrack.videoCodec || 'N/A'}
-  Audio Codec: ${currentTrack.audioCodec || 'N/A'}
-  Resolution: ${currentTrack.width || 'N/A'}x${currentTrack.height || 'N/A'}
-  Frame Rate: ${currentTrack.frameRate || 'N/A'}
-                    `;
-                } else {
-                    adaptationInfoEl.textContent = 'No active track';
-                }
-            } catch (e) {
-                adaptationInfoEl.textContent = `Error getting adaptation info: ${e.message}`;
-            }
+
+        function retryStream() {
+          console.log("🔁 Cuba semula diminta user");
+          initPlayer();
         }
-        
-        function updateNetworkRequests() {
-            networkRequestsEl.textContent = networkRequests.slice(-20).join('\n');
-        }
-        
-        function logEvent(message) {
-            const timestamp = new Date().toISOString();
-            eventLog.push(`[${timestamp}] ${message}`);
-            eventLogEl.textContent = eventLog.slice(-50).join('\n');
-        }
-        
-        function updateManifestInfo() {
-            try {
-                const manifest = player.getManifest();
-                manifestDetailsEl.innerHTML = JSON.stringify(manifest, null, 2);
-            } catch (e) {
-                manifestDetailsEl.textContent = `Error getting manifest info: ${e.message}`;
-            }
-        }
-        
-        function showError(message) {
-            errorMessageEl.textContent = message;
-            errorMessageEl.style.display = 'block';
-            logEvent(`ERROR: ${message}`);
-        }
-        
-        // Control buttons
-        document.getElementById('play').addEventListener('click', () => {
-            video.play();
-            updatePlayerStatus();
+
+        document.addEventListener("DOMContentLoaded", () => {
+          if (shaka.Player.isBrowserSupported()) {
+            document.addEventListener('shaka-ui-loaded', () => {
+                initPlayer();
+                makeControlsFocusable();
+            });
+          } else console.error("❌ Shaka Player tidak disokong");
         });
+
+        document.addEventListener('keydown', unmuteVideo);
         
-        document.getElementById('pause').addEventListener('click', () => {
-            video.pause();
-            updatePlayerStatus();
-        });
-        
-        document.getElementById('mute').addEventListener('click', () => {
-            video.muted = !video.muted;
-            updatePlayerStatus();
-        });
-        
-        document.getElementById('fullscreen').addEventListener('click', () => {
-            if (video.requestFullscreen) {
-                video.requestFullscreen();
-            } else if (video.webkitRequestFullscreen) {
-                video.webkitRequestFullscreen();
-            } else if (video.msRequestFullscreen) {
-                video.msRequestFullscreen();
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
+                setTimeout(ensureFocus, 0);
             }
         });
-        
-        document.getElementById('toggleDebug').addEventListener('click', () => {
-            debugVisible = !debugVisible;
-            document.querySelector('.debug-container').style.display = debugVisible ? 'flex' : 'none';
-        });
-        
-        document.getElementById('reload').addEventListener('click', () => {
-            loadStream();
-        });
-        
-        document.getElementById('clearErrors').addEventListener('click', () => {
-            errorMessageEl.style.display = 'none';
-            errorMessageEl.textContent = '';
-        });
-        
-        document.getElementById('loadStream').addEventListener('click', () => {
-            loadStream();
-        });
-        
-        // Load stream function
-        async function loadStream() {
-            const mpdUrl = document.getElementById('mpdUrl').value;
-            
-            try {
-                // Clear previous errors
-                errorMessageEl.style.display = 'none';
-                
-                // Configure player
-                player.configure({
-                    streaming: {
-                        lowLatencyMode: true,
-                        inaccurateManifestTolerance: 0,
-                        rebufferingGoal: 0.01,
-                        bufferingGoal: 0.01,
-                        bufferBehind: 30
-                    }
-                });
-                
-                await player.load(mpdUrl);
-                logEvent('Stream loaded successfully');
-                updatePlayerStatus();
-                updateManifestInfo();
-            } catch (e) {
-                const errorMsg = `Error loading stream: ${e.message}`;
-                showError(errorMsg);
-                console.error('Error loading stream', e);
-            }
-        }
-        
-        // Update debug info periodically
-        setInterval(() => {
-            try {
-                if (video.readyState > 0) {
-                    updatePlayerStatus();
-                    updateBufferInfo();
-                    updateAdaptationInfo();
-                }
-            } catch (e) {
-                console.error('Error updating debug info:', e);
-            }
-        }, 1000);
-        
-        // Initialize
-        logEvent('Shaka Player initialized');
-        updatePlayerStatus();
-        
-        // Auto-load the stream after a short delay
-        setTimeout(() => {
-            loadStream();
-        }, 500);
+
+        document.addEventListener('shaka-ui-load-failed', initFailed);
     </script>
 </body>
 </html>
