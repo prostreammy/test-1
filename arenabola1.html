@@ -79,6 +79,21 @@
         [data-shaka-player-container] button {
              -webkit-appearance: none;
         }
+        
+        /* Error message styling */
+        #error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 80%;
+            text-align: center;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -86,6 +101,7 @@
     <div data-shaka-player-container>
         <video data-shaka-player id="video"></video>
         <div id="watermark">SOOKA-EPL1</div>
+        <div id="error-message"></div>
     </div>
 
     <script>
@@ -108,7 +124,19 @@
             console.log(`✅ Made ${focusableElements.length} elements focusable.`);
         }
 
-        // --- NEW: Function to unmute the video ---
+        // --- Function to show error message ---
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            // Hide error after 5 seconds
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // --- Function to unmute the video ---
         function unmuteVideo() {
             const video = document.getElementById('video');
             if (video.muted && video.readyState > 2) { // Only unmute if video is loaded
@@ -131,20 +159,27 @@
             // Create a networking engine to add custom headers
             const networkingEngine = player.getNetworkingEngine();
             networkingEngine.registerRequestFilter((type, request) => {
-                // Add authorization header for manifest and segment requests
+                // Add authorization header for all requests
                 request.headers['Authorization'] = authToken;
-                // Add origin header to match the original request
+                
+                // Add origin and referer headers to match the original request
                 request.headers['Origin'] = 'https://sooka.my';
-                // Add referer header to match the original request
                 request.headers['Referer'] = 'https://sooka.my/';
+                
+                // Add other headers from the original request
+                request.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
+                request.headers['Accept'] = '*/*';
+                request.headers['Accept-Language'] = 'en-US,en;q=0.9,ms;q=0.8';
+                request.headers['Cache-Control'] = 'no-cache';
+                request.headers['Pragma'] = 'no-cache';
             });
 
-            // Configure DRM with robustness level
+            // Configure DRM with proper servers
             player.configure({
                 drm: {
                     servers: {
-                        'com.widevine.alpha': 'https://l01.dp.sooka.my',
-                        'com.microsoft.playready': 'https://l01.dp.sooka.my'
+                        'com.widevine.alpha': 'https://l01.dp.sooka.my/',
+                        'com.microsoft.playready': 'https://l01.dp.sooka.my/'
                     },
                     advanced: {
                         'com.widevine.alpha': {
@@ -159,10 +194,8 @@
                 },
                 streaming: {
                     // Set max resolution to 2160p as per JWT filter
-                    restrictions: {
-                        maxWidth: 3840,
-                        maxHeight: 2160
-                    }
+                    preferredVideoCodecs: ['avc1', 'hev1', 'vp9', 'av01'],
+                    preferredAudioCodecs: ['mp4a', 'ec-3']
                 }
             });
 
@@ -204,17 +237,44 @@
                 await player.load(manifestUri);
                 console.log('✅ The video has now been loaded!');
                 
-                await player.play();
+                // Use the controls to play instead of directly calling player.play()
+                await controls.play();
                 console.log('✅ Autoplay started (muted). Will unmute shortly.');
 
             } catch (error) {
+                console.error('Error loading or playing video:', error);
+                showError('Failed to load video: ' + error.message);
                 onPlayerError(error);
             }
         }
 
-        function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
+        function onPlayerErrorEvent(errorEvent) { 
+            const error = errorEvent.detail;
+            onPlayerError(error); 
+        }
+        
         function onPlayerError(error) { 
             console.error('Error code', error.code, 'object', error); 
+            let errorMessage = 'An error occurred';
+            
+            if (error.code === 6000) {
+                errorMessage = 'Network error. Please check your connection.';
+            } else if (error.code === 6001) {
+                errorMessage = 'Request timed out. Please try again.';
+            } else if (error.code === 6002) {
+                errorMessage = 'Response error. The server returned an error.';
+            } else if (error.code === 6003) {
+                errorMessage = 'Malformed response. The server returned invalid data.';
+            } else if (error.code === 6007) {
+                errorMessage = 'HTTP error. The server returned an HTTP error.';
+            } else if (error.code === 6012) {
+                errorMessage = 'License request failed. This might be due to DRM restrictions.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            showError(errorMessage);
+            
             // Don't unmute if there's an error
             const video = document.getElementById('video');
             if (video) {
@@ -222,8 +282,15 @@
                 document.removeEventListener('keydown', unmuteVideo);
             }
         }
-        function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
-        function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
+        
+        function onUIErrorEvent(errorEvent) { 
+            onPlayerError(errorEvent.detail); 
+        }
+        
+        function initFailed(errorEvent) { 
+            console.error('❌ Unable to load the UI library!'); 
+            showError('Failed to load player. Please refresh the page.');
+        }
 
         // Install shaka-player polyfills
         shaka.polyfill.installAll();
@@ -236,6 +303,7 @@
             });
         } else {
             console.error('Browser not supported!');
+            showError('Your browser is not supported. Please try a modern browser.');
         }
 
         // --- NEW: Add a fallback to unmute on any remote button press ---
