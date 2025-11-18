@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Shaka Player with Debugging</title>
+    
+    <!-- Shaka Player compiled library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.7.1/shaka-player.ui.js"></script>
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.7.1/shaka-player.css">
+    
+    <!-- Material Design Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Material Design Lite -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,500" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            background-color: #000;
+            margin-bottom: 20px;
+        }
+        
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .control-button {
+            padding: 8px 16px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .control-button:hover {
+            background-color: #3367d6;
+        }
+        
+        .debug-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .debug-panel {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .debug-content {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-good {
+            background-color: #4caf50;
+        }
+        
+        .status-warning {
+            background-color: #ff9800;
+        }
+        
+        .status-error {
+            background-color: #f44336;
+        }
+        
+        .config-form {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab-button {
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab-button.active {
+            border-bottom: 2px solid #4285f4;
+            font-weight: 500;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 15px 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .warning-message {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Shaka Player with Debugging</h1>
+        
+        <div class="warning-message">
+            <strong>CORS Warning:</strong> This player may not work when opened directly from the file system due to CORS restrictions. 
+            Please serve this file from a web server (like Python's http.server or Node.js http-server) with the same domain as the stream or use a browser extension to bypass CORS.
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="config-form">
+            <h3>Stream Configuration</h3>
+            <div class="form-group">
+                <label for="mpdUrl">MPD URL:</label>
+                <input type="text" id="mpdUrl" value="https://load.perfecttv.net/rwt.mpd?username=vip_3klp0es8&password=wg3piwEs&channel=riahd">
+            </div>
+            <div class="form-group">
+                <label for="origin">Origin:</label>
+                <input type="text" id="origin" value="https://wcc.cam/edge">
+            </div>
+            <div class="form-group">
+                <label for="device">X-PTV-Device:</label>
+                <input type="text" id="device" value="bd0e7d89254a0d9d">
+            </div>
+            <div class="form-group">
+                <label for="userAgent">User-Agent:</label>
+                <input type="text" id="userAgent" value="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36">
+            </div>
+            <button class="control-button" id="loadStream">Load Stream</button>
+            <button class="control-button" id="clearErrors">Clear Errors</button>
+        </div>
+        
+        <div class="video-container">
+            <video id="video" controls></video>
+        </div>
+        
+        <div class="controls">
+            <button class="control-button" id="play">Play</button>
+            <button class="control-button" id="pause">Pause</button>
+            <button class="control-button" id="mute">Mute/Unmute</button>
+            <button class="control-button" id="fullscreen">Fullscreen</button>
+            <button class="control-button" id="toggleDebug">Toggle Debug</button>
+            <button class="control-button" id="reload">Reload</button>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="player-info">Player Info</button>
+                <button class="tab-button" data-tab="network-activity">Network Activity</button>
+                <button class="tab-button" data-tab="event-log">Event Log</button>
+                <button class="tab-button" data-tab="manifest-info">Manifest Info</button>
+            </div>
+            
+            <div class="tab-content active" id="player-info">
+                <div class="debug-panel">
+                    <h3>Player Status</h3>
+                    <div class="debug-content" id="playerStatus">Initializing...</div>
+                </div>
+                
+                <div class="debug-panel">
+                    <h3>Buffer Info</h3>
+                    <div class="debug-content" id="bufferInfo">Waiting for data...</div>
+                </div>
+                
+                <div class="debug-panel">
+                    <h3>Adaptation Info</h3>
+                    <div class="debug-content" id="adaptationInfo">Waiting for data...</div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="network-activity">
+                <div class="debug-panel">
+                    <h3>Network Requests</h3>
+                    <div class="debug-content" id="networkRequests">No network activity yet...</div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="event-log">
+                <div class="debug-panel">
+                    <h3>Event Log</h3>
+                    <div class="debug-content" id="eventLog">No events yet...</div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="manifest-info">
+                <div class="debug-panel">
+                    <h3>Manifest Details</h3>
+                    <div class="debug-content" id="manifestDetails">No manifest loaded yet...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check browser compatibility
+        if (!shaka.Player.isBrowserSupported()) {
+            showError('Your browser does not support Shaka Player. Please try a modern browser like Chrome, Firefox, or Edge.');
+        }
+
+        // Initialize Shaka Player with new API
+        const video = document.getElementById('video');
+        const player = new shaka.Player();
+        
+        // Attach to video element
+        player.attach(video).catch(error => {
+            showError('Failed to attach player to video element: ' + error.message);
+        });
+        
+        // Debug variables
+        let debugVisible = true;
+        let networkRequests = [];
+        let eventLog = [];
+        
+        // UI elements
+        const playerStatusEl = document.getElementById('playerStatus');
+        const bufferInfoEl = document.getElementById('bufferInfo');
+        const adaptationInfoEl = document.getElementById('adaptationInfo');
+        const networkRequestsEl = document.getElementById('networkRequests');
+        const eventLogEl = document.getElementById('eventLog');
+        const manifestDetailsEl = document.getElementById('manifestDetails');
+        const errorMessageEl = document.getElementById('errorMessage');
+        
+        // Tab functionality
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // Update button states
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
+                
+                // Update content visibility
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+        
+        // Custom request filter to add headers
+        const requestFilter = (requestType, request) => {
+            // Add custom headers for all requests
+            request.headers['Origin'] = document.getElementById('origin').value;
+            request.headers['X-PTV-Device'] = document.getElementById('device').value;
+            request.headers['User-Agent'] = document.getElementById('userAgent').value;
+            
+            // Log network requests
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] ${requestType}: ${request.uris[0]}`;
+            networkRequests.push(logEntry);
+            updateNetworkRequests();
+            
+            return request;
+        };
+        
+        // Custom response filter to log responses
+        const responseFilter = (requestType, response) => {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] Response: ${response.uri} (Status: ${response.status || 'N/A'})`;
+            networkRequests.push(logEntry);
+            updateNetworkRequests();
+            
+            return response;
+        };
+        
+        // Install the filters
+        player.getNetworkingEngine().registerRequestFilter(requestFilter);
+        player.getNetworkingEngine().registerResponseFilter(responseFilter);
+        
+        // Event listeners
+        player.addEventListener('loading', () => {
+            logEvent('Loading started');
+            updatePlayerStatus();
+        });
+        
+        player.addEventListener('loaded', () => {
+            logEvent('Manifest loaded');
+            updatePlayerStatus();
+            updateManifestInfo();
+        });
+        
+        player.addEventListener('error', (error) => {
+            logEvent(`Error: ${error.detail}`);
+            showError(`Player error: ${error.detail}`);
+            updatePlayerStatus();
+        });
+        
+        player.addEventListener('buffering', () => {
+            logEvent('Buffering state changed');
+            updatePlayerStatus();
+        });
+        
+        player.addEventListener('adaptation', () => {
+            logEvent('Adaptation event');
+            updateAdaptationInfo();
+        });
+        
+        // Update functions
+        function updatePlayerStatus() {
+            try {
+                const status = {
+                    'State': getPlayerState(),
+                    'Is Live': player.isLive(),
+                    'Duration': player.getDuration(),
+                    'Seek Range': player.getSeekRange(),
+                    'Play Rate': video.playbackRate,
+                    'Volume': video.volume,
+                    'Muted': video.muted,
+                    'Current Time': video.currentTime,
+                    'Paused': video.paused,
+                    'Ready State': video.readyState
+                };
+                
+                playerStatusEl.innerHTML = Object.entries(status)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join('\n');
+            } catch (e) {
+                playerStatusEl.textContent = `Error getting status: ${e.message}`;
+            }
+        }
+        
+        function getPlayerState() {
+            // Since getState() is not available, infer state from video element
+            if (video.readyState === 0) return 'NOT_LOADED';
+            if (video.readyState < 3) return 'LOADING';
+            if (video.paused) return 'PAUSED';
+            return 'PLAYING';
+        }
+        
+        function updateBufferInfo() {
+            try {
+                const bufferInfo = player.getBufferedInfo();
+                bufferInfoEl.innerHTML = JSON.stringify(bufferInfo, null, 2);
+            } catch (e) {
+                // Fallback to video buffered info
+                if (video.buffered.length > 0) {
+                    const ranges = [];
+                    for (let i = 0; i < video.buffered.length; i++) {
+                        ranges.push({
+                            start: video.buffered.start(i),
+                            end: video.buffered.end(i)
+                        });
+                    }
+                    bufferInfoEl.innerHTML = JSON.stringify(ranges, null, 2);
+                } else {
+                    bufferInfoEl.textContent = 'No buffered data';
+                }
+            }
+        }
+        
+        function updateAdaptationInfo() {
+            try {
+                const tracks = player.getVariantTracks();
+                const currentTrack = tracks.find(track => track.active);
+                
+                if (currentTrack) {
+                    adaptationInfoEl.innerHTML = `
+Current Track:
+  ID: ${currentTrack.id}
+  Bandwidth: ${currentTrack.bandwidth}
+  Video Codec: ${currentTrack.videoCodec || 'N/A'}
+  Audio Codec: ${currentTrack.audioCodec || 'N/A'}
+  Resolution: ${currentTrack.width || 'N/A'}x${currentTrack.height || 'N/A'}
+  Frame Rate: ${currentTrack.frameRate || 'N/A'}
+                    `;
+                } else {
+                    adaptationInfoEl.textContent = 'No active track';
+                }
+            } catch (e) {
+                adaptationInfoEl.textContent = `Error getting adaptation info: ${e.message}`;
+            }
+        }
+        
+        function updateNetworkRequests() {
+            networkRequestsEl.textContent = networkRequests.slice(-20).join('\n');
+        }
+        
+        function logEvent(message) {
+            const timestamp = new Date().toISOString();
+            eventLog.push(`[${timestamp}] ${message}`);
+            eventLogEl.textContent = eventLog.slice(-50).join('\n');
+        }
+        
+        function updateManifestInfo() {
+            try {
+                const manifest = player.getManifest();
+                manifestDetailsEl.innerHTML = JSON.stringify(manifest, null, 2);
+            } catch (e) {
+                manifestDetailsEl.textContent = `Error getting manifest info: ${e.message}`;
+            }
+        }
+        
+        function showError(message) {
+            errorMessageEl.textContent = message;
+            errorMessageEl.style.display = 'block';
+            logEvent(`ERROR: ${message}`);
+        }
+        
+        // Control buttons
+        document.getElementById('play').addEventListener('click', () => {
+            video.play();
+            updatePlayerStatus();
+        });
+        
+        document.getElementById('pause').addEventListener('click', () => {
+            video.pause();
+            updatePlayerStatus();
+        });
+        
+        document.getElementById('mute').addEventListener('click', () => {
+            video.muted = !video.muted;
+            updatePlayerStatus();
+        });
+        
+        document.getElementById('fullscreen').addEventListener('click', () => {
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) {
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) {
+                video.msRequestFullscreen();
+            }
+        });
+        
+        document.getElementById('toggleDebug').addEventListener('click', () => {
+            debugVisible = !debugVisible;
+            document.querySelector('.debug-container').style.display = debugVisible ? 'flex' : 'none';
+        });
+        
+        document.getElementById('reload').addEventListener('click', () => {
+            loadStream();
+        });
+        
+        document.getElementById('clearErrors').addEventListener('click', () => {
+            errorMessageEl.style.display = 'none';
+            errorMessageEl.textContent = '';
+        });
+        
+        document.getElementById('loadStream').addEventListener('click', () => {
+            loadStream();
+        });
+        
+        // Load stream function
+        async function loadStream() {
+            const mpdUrl = document.getElementById('mpdUrl').value;
+            
+            try {
+                // Clear previous errors
+                errorMessageEl.style.display = 'none';
+                
+                // Configure player
+                player.configure({
+                    streaming: {
+                        lowLatencyMode: true,
+                        inaccurateManifestTolerance: 0,
+                        rebufferingGoal: 0.01,
+                        bufferingGoal: 0.01,
+                        bufferBehind: 30
+                    }
+                });
+                
+                await player.load(mpdUrl);
+                logEvent('Stream loaded successfully');
+                updatePlayerStatus();
+                updateManifestInfo();
+            } catch (e) {
+                const errorMsg = `Error loading stream: ${e.message}`;
+                showError(errorMsg);
+                console.error('Error loading stream', e);
+            }
+        }
+        
+        // Update debug info periodically
+        setInterval(() => {
+            try {
+                if (video.readyState > 0) {
+                    updatePlayerStatus();
+                    updateBufferInfo();
+                    updateAdaptationInfo();
+                }
+            } catch (e) {
+                console.error('Error updating debug info:', e);
+            }
+        }, 1000);
+        
+        // Initialize
+        logEvent('Shaka Player initialized');
+        updatePlayerStatus();
+        
+        // Auto-load the stream after a short delay
+        setTimeout(() => {
+            loadStream();
+        }, 500);
+    </script>
+</body>
+</html>
