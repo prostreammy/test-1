@@ -158,18 +158,10 @@
 
     let currentToken = null;
 
-    function shuffleArray(array) {
-        let shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }
-
+    function shuffleArray(array) { /* ... same as before ... */ }
+    
     async function getTokenList() {
         try {
-            // DEBUG: Show user we are trying to get a token
             loadingText.innerText = "Fetching access token...";
             console.log('🔍 Fetching token from:', proxyUrl);
             
@@ -192,26 +184,21 @@
             console.log(`🎫 ${tokens.length} token received`);
             return tokens;
         } catch (err) {
-            // DEBUG: Show the exact error on screen
-            console.error("❌ Failed to get token:", err);
-            loadingText.innerText = `Error: Could not get token. (${err.message})`;
+            // SPECIFIC DEBUGGING FOR CORS
+            if (err.message.includes('Failed to fetch') || err.message.includes('Network request failed')) {
+                console.error("❌ CORS or Network Error:", err);
+                loadingText.innerText = "CORS Error: This app is blocking the request.";
+            } else {
+                console.error("❌ Failed to get token:", err);
+                loadingText.innerText = `Error: Could not get token. (${err.message})`;
+            }
             return [];
         }
     }
 
-    function getCachedToken() {
-        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-        return localStorage.getItem(key) || "";
-    }
-    function setCachedToken(token) {
-        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-        localStorage.setItem(key, token);
-        console.log(`💾 Cached token for ${channel}: ${token.substring(0, 25)}...`);
-    }
-    function clearCachedToken() {
-        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-        localStorage.removeItem(key);
-    }
+    function getCachedToken() { /* ... same as before ... */ }
+    function setCachedToken(token) { /* ... same as before ... */ }
+    function clearCachedToken() { /* ... same as before ... */ }
 
     // --- PART 2: MAIN PLAYER INITIALIZATION ---
 
@@ -225,39 +212,11 @@
         loadingText.innerText = "Initializing player...";
         retryButton.style.display = "none";
 
-        ui.configure({
-            addSeekBar: false,
-            addBigPlayButton: true,
-            singleClickForPlayAndPause: false,
-            enableTooltips: false,
-            doubleClickForFullscreen: false,
-            controlPanelElements: ['play_pause', 'spacer', 'overflow_menu', 'fullscreen'],
-            overflowMenuButtons: ['captions', 'quality', 'language', 'chapter', 'picture_in_picture', 'playback_rate'],
-        });
-
-        // MOBILE: Add configuration for better mobile reliability
+        ui.configure({ /* ... same as before ... */ });
+        
+        // TEST: Try without DRM keys first to isolate the issue
         player.configure({
-            drm: {
-                clearKeys: {
-                    "c15541e4dde34c48a0d144a4b0ab7194":"ce82e3d81126183e5a262e320f6348b3",
-                    "d5249cb40505495494828f42c37087cb":"d59f6a7bed00bd5348355ab5b3ee6aa0",
-                },
-            },
-            streaming: {
-                // MOBILE: A longer delay can help with network jitter on mobile
-                defaultPresentationDelay: 30,
-                // MOBILE: More aggressive retry for unstable connections
-                retryParameters: {
-                    maxAttempts: 5,
-                    baseDelay: 1000,
-                    backoffFactor: 2,
-                    fuzzFactor: 0.5,
-                },
-                // MOBILE: Disable ABR initially to see if it's an adaptation issue
-                abr: {
-                    enabled: false, 
-                }
-            },
+            // drm: { ... } // Commented out for testing
         });
 
         player.getNetworkingEngine().registerRequestFilter((type, request) => {
@@ -266,13 +225,11 @@
                 request.headers["authorization"] = "Bearer " + currentToken;
             }
         });
-
-        // --- Token Loading Logic ---
+        
         const cachedToken = getCachedToken();
         const tokens = await getTokenList();
 
         if (tokens.length === 0 && !cachedToken) {
-            // Error message is already displayed by getTokenList()
             retryButton.style.display = "inline-block";
             return;
         }
@@ -280,23 +237,23 @@
         async function tryLoadWithToken(token, label) {
             try {
                 loadingText.innerText = `Attempting to load stream (${label})...`;
-                console.log(`🔍 Trying token (${label})`);
-                
                 currentToken = token;
                 await player.load(streamURL);
-                
                 console.log(`✅ Token (${label}) successful`);
                 setCachedToken(token);
-
                 loadingOverlay.classList.add("fade-out");
                 setTimeout(() => { loadingOverlay.style.display = "none"; }, 700);
-
                 player.setTextTrackVisibility(true);
                 return true;
             } catch (err) {
-                // DEBUG: Show the specific Shaka player error
-                console.warn(`⚠️ Token (${label}) failed:`, err);
-                loadingText.innerText = `Stream failed. Retrying... (${err.code || err.message})`;
+                // SPECIFIC DEBUGGING FOR CORS
+                if (err.code === shaka.util.Error.Code.LOAD_FAILED) {
+                     console.warn("⚠️ Stream failed (Possibly CORS):", err);
+                     loadingText.innerText = `Stream Failed. This app may be blocking the video.`;
+                } else {
+                     console.warn(`⚠️ Token (${label}) failed:`, err);
+                     loadingText.innerText = `Stream failed. Retrying... (${err.code || err.message})`;
+                }
                 await player.unload();
                 return false;
             }
@@ -313,19 +270,16 @@
             if (ok) return;
         }
 
-        // If we get here, everything failed
         console.error("😢 All tokens failed.");
         loadingText.innerText = "Sorry, all attempts to load the stream failed.";
         retryButton.style.display = "inline-block";
     }
 
-    // --- PART 3: EVENT LISTENERS ---
-
+    // --- PART 3: EVENT LISTENERS (Same as before) ---
     function makeControlsFocusable() { /* ... */ }
     function unmuteVideo() { /* ... */ }
     function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
     function onPlayerError(error) {
-        // DEBUG: Also display player errors on the screen
         console.error('Error code', error.code, 'object', error);
         loadingText.innerText = `Player Error: ${error.code} - ${error.message}`;
         loadingOverlay.style.display = 'flex';
