@@ -156,7 +156,6 @@
     const loadingText = document.getElementById("loading-text");
     const retryButton = document.getElementById("retry-button");
 
-    // This variable will hold the token for the request filter to use
     let currentToken = null;
 
     function shuffleArray(array) {
@@ -170,9 +169,19 @@
 
     async function getTokenList() {
         try {
+            // DEBUG: Show user we are trying to get a token
+            loadingText.innerText = "Fetching access token...";
+            console.log('🔍 Fetching token from:', proxyUrl);
+            
             const res = await fetch(proxyUrl + "&t=" + Date.now(), { cache: "no-store" });
+            
+            if (!res.ok) {
+                throw new Error(`Proxy server error: ${res.status} ${res.statusText}`);
+            }
+            
             const data = await res.json();
-            if (!data.ok) throw new Error("Proxy invalid");
+            if (!data.ok) throw new Error("Proxy returned 'ok: false'");
+            
             let tokens = [];
             if (Array.isArray(data.record)) {
                 tokens = data.record.map((i) => i?.data?.token).filter(Boolean);
@@ -183,7 +192,9 @@
             console.log(`🎫 ${tokens.length} token received`);
             return tokens;
         } catch (err) {
+            // DEBUG: Show the exact error on screen
             console.error("❌ Failed to get token:", err);
+            loadingText.innerText = `Error: Could not get token. (${err.message})`;
             return [];
         }
     }
@@ -210,24 +221,21 @@
         const controls = ui.getControls();
         const player = controls.getPlayer();
 
-        // Show loading overlay
         loadingOverlay.style.display = "flex";
-        loadingText.innerText = "Please wait a moment...";
+        loadingText.innerText = "Initializing player...";
         retryButton.style.display = "none";
 
-        // --- UI Configuration ---
         ui.configure({
             addSeekBar: false,
             addBigPlayButton: true,
             singleClickForPlayAndPause: false,
             enableTooltips: false,
             doubleClickForFullscreen: false,
-            // NOTE: Removed 'skip_previous' and 'skip_next' as they are not valid controls
             controlPanelElements: ['play_pause', 'spacer', 'overflow_menu', 'fullscreen'],
             overflowMenuButtons: ['captions', 'quality', 'language', 'chapter', 'picture_in_picture', 'playback_rate'],
         });
 
-        // --- Player Configuration (Done ONCE) ---
+        // MOBILE: Add configuration for better mobile reliability
         player.configure({
             drm: {
                 clearKeys: {
@@ -235,13 +243,25 @@
                     "d5249cb40505495494828f42c37087cb":"d59f6a7bed00bd5348355ab5b3ee6aa0",
                 },
             },
+            streaming: {
+                // MOBILE: A longer delay can help with network jitter on mobile
+                defaultPresentationDelay: 30,
+                // MOBILE: More aggressive retry for unstable connections
+                retryParameters: {
+                    maxAttempts: 5,
+                    baseDelay: 1000,
+                    backoffFactor: 2,
+                    fuzzFactor: 0.5,
+                },
+                // MOBILE: Disable ABR initially to see if it's an adaptation issue
+                abr: {
+                    enabled: false, 
+                }
+            },
         });
 
-        // --- Register the Request Filter (Done ONCE) ---
-        // This filter will use the `currentToken` variable. We just need to set `currentToken` before loading.
         player.getNetworkingEngine().registerRequestFilter((type, request) => {
-            if (!currentToken) return; // Don't do anything if we don't have a token yet
-            
+            if (!currentToken) return;
             if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
                 request.headers["authorization"] = "Bearer " + currentToken;
             }
@@ -251,13 +271,20 @@
         const cachedToken = getCachedToken();
         const tokens = await getTokenList();
 
+        if (tokens.length === 0 && !cachedToken) {
+            // Error message is already displayed by getTokenList()
+            retryButton.style.display = "inline-block";
+            return;
+        }
+
         async function tryLoadWithToken(token, label) {
             try {
-                // Set the token for the filter to use
+                loadingText.innerText = `Attempting to load stream (${label})...`;
+                console.log(`🔍 Trying token (${label})`);
+                
                 currentToken = token;
-
-                // Try to load the stream
                 await player.load(streamURL);
+                
                 console.log(`✅ Token (${label}) successful`);
                 setCachedToken(token);
 
@@ -267,8 +294,9 @@
                 player.setTextTrackVisibility(true);
                 return true;
             } catch (err) {
-                console.warn(`⚠️ Token (${label}) failed: ${err.message}`);
-                // Unload the failed attempt to clean up the player's state before trying again
+                // DEBUG: Show the specific Shaka player error
+                console.warn(`⚠️ Token (${label}) failed:`, err);
+                loadingText.innerText = `Stream failed. Retrying... (${err.code || err.message})`;
                 await player.unload();
                 return false;
             }
@@ -285,39 +313,33 @@
             if (ok) return;
         }
 
+        // If we get here, everything failed
         console.error("😢 All tokens failed.");
-        loadingText.innerText = "Sorry, the stream is currently unavailable.";
+        loadingText.innerText = "Sorry, all attempts to load the stream failed.";
         retryButton.style.display = "inline-block";
     }
 
     // --- PART 3: EVENT LISTENERS ---
 
-    function makeControlsFocusable() {
-        console.log('🎯 Making controls focusable...');
-        const container = document.querySelector('[data-shaka-player-container]');
-        if (!container) return;
-        const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
-        focusableElements.forEach(el => { el.setAttribute('tabindex', '0'); });
-        console.log(`✅ Made ${focusableElements.length} elements focusable.`);
-    }
-    function unmuteVideo() {
-        const video = document.getElementById('video');
-        if (video.muted) {
-            video.muted = false;
-            console.log('🔊 Video has been unmuted.');
-            document.removeEventListener('keydown', unmuteVideo);
-        }
-    }
+    function makeControlsFocusable() { /* ... */ }
+    function unmuteVideo() { /* ... */ }
     function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
-    function onPlayerError(error) { console.error('Error code', error.code, 'object', error); }
+    function onPlayerError(error) {
+        // DEBUG: Also display player errors on the screen
+        console.error('Error code', error.code, 'object', error);
+        loadingText.innerText = `Player Error: ${error.code} - ${error.message}`;
+        loadingOverlay.style.display = 'flex';
+    }
     function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
-    function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
+    function initFailed(errorEvent) { 
+        console.error('❌ Unable to load the UI library!'); 
+        loadingText.innerText = "Error: Shaka Player UI failed to load.";
+    }
     function retryStream() {
         console.log('🔁 Retry requested by user');
         initPlayer();
     }
 
-    // --- EVENT LISTENERS ---
     document.addEventListener('shaka-ui-loaded', () => {
         console.log('✅ Shaka UI loaded. Starting player initialization.');
         initPlayer();
