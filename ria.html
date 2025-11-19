@@ -170,12 +170,17 @@
 
     async function getTokenList() {
         try {
+            // --- TWEAK: Simplified loading text ---
             loadingText.innerText = "Loading...";
+            
             const res = await fetch(proxyUrl + "&t=" + Date.now(), { cache: "no-store" });
+            
             if (!res.ok) {
                 throw new Error(`Proxy server error: ${res.status} ${res.statusText}`);
             }
+            
             const data = await res.json();
+
             let tokens = [];
             if (data && typeof data === 'object') {
                 if (Array.isArray(data.record) && data.record.length > 0) {
@@ -186,9 +191,11 @@
             } else {
                 throw new Error("Proxy response was not a valid JSON object.");
             }
+            
             if (!Array.isArray(tokens)) {
                 throw new Error("Token processing failed: result is not an array.");
             }
+
             tokens = shuffleArray(tokens);
             return tokens;
         } catch (err) {
@@ -222,8 +229,9 @@
         loadingText.innerText = "Loading...";
         retryButton.style.display = "none";
 
+        // --- TWEAK: UI Configuration with Seek Bar Removed ---
         ui.configure({
-            addSeekBar: false,
+            addSeekBar: false, // <-- IMPORTANT: Seek bar removed for D-pad compatibility
             addBigPlayButton: true,
             singleClickForPlayAndPause: false,
             enableTooltips: false,
@@ -248,31 +256,6 @@
             }
         });
         
-        // --- NEW: Robust Subtitle Handler ---
-        // This function will be called whenever tracks are added/changed
-        const handleTracks = () => {
-            try {
-                const textTracks = player.getTextTracks();
-                console.log('🎬 Available tracks:', textTracks); // DEBUG: Log all tracks
-
-                // Find the first subtitle track that is not disabled
-                const subtitleTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
-
-                if (subtitleTrack) {
-                    console.log('🎬 Found and enabling subtitle track:', subtitleTrack.language, subtitleTrack.label);
-                    player.selectTextTrack(subtitleTrack);
-                    player.setTextTrackVisibility(true);
-                } else {
-                    console.log('🎬 No subtitle track found in the stream.');
-                }
-            } catch (e) {
-                console.error('Error handling tracks:', e);
-            }
-        };
-
-        // Add the event listener
-        player.addEventListener('trackschanged', handleTracks);
-        
         const cachedToken = getCachedToken();
         const tokens = await getTokenList();
 
@@ -289,10 +272,7 @@
                 setCachedToken(token);
                 loadingOverlay.classList.add("fade-out");
                 setTimeout(() => { loadingOverlay.style.display = "none"; }, 700);
-                
-                // The `trackschanged` event will fire automatically after load, so we don't need to call it here.
-                // player.setTextTrackVisibility(true); // <-- REMOVED THIS LINE
-                
+                player.setTextTrackVisibility(true);
                 return true;
             } catch (err) {
                 loadingText.innerText = `Stream failed. Retrying... (${err.code || err.message})`;
