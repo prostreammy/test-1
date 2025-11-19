@@ -146,7 +146,7 @@
     <!-- Loading Overlay -->
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <div id="loading-text" style="display: none;">Initializing stream...</div>
+        <div id="loading-text">Initializing stream...</div>
         <button id="retry-button" style="display: none;">Retry</button>
     </div>
 
@@ -180,6 +180,7 @@
     // --- THIS IS THE UPDATED FUNCTION ---
     async function getTokenList() {
         try {
+            loadingText.innerText = "Fetching access token...";
             console.log('🔍 Fetching token from:', proxyUrl);
             
             const res = await fetch(proxyUrl + "&t=" + Date.now(), { cache: "no-store" });
@@ -189,21 +190,25 @@
             }
             
             const data = await res.json();
+            // CRITICAL DEBUG: Log the raw response to see what we're actually getting
             console.log('Raw response from proxy:', data);
 
             let tokens = [];
+            // More defensive checks to handle different response formats
             if (data && typeof data === 'object') {
                 if (Array.isArray(data.record) && data.record.length > 0) {
                     tokens = data.record.map((i) => i?.data?.token).filter(Boolean);
                 } else if (data.token) {
                     tokens = [data.token];
                 } else {
+                    // Maybe the structure is completely different now
                     console.warn("⚠️ Proxy response format is unknown. Data:", data);
                 }
             } else {
                 throw new Error("Proxy response was not a valid JSON object.");
             }
             
+            // Final check before shuffling
             if (!Array.isArray(tokens)) {
                 console.error("❌ 'tokens' is not an array before shuffling. Value:", tokens);
                 throw new Error("Token processing failed: result is not an array.");
@@ -214,6 +219,7 @@
             return tokens;
         } catch (err) {
             console.error("❌ Failed to get token:", err);
+            loadingText.innerText = `Error: Could not get token. (${err.message})`;
             return [];
         }
     }
@@ -229,7 +235,7 @@
         localStorage.removeItem('shaka_token');
     }
 
-    // --- PART 2: MAIN PLAYER INITIALIZATION ---
+    // --- PART 2: MAIN PLAYER INITIALIZATION (Same as last time) ---
 
     async function initPlayer() {
         const video = document.getElementById("video");
@@ -238,6 +244,7 @@
         const player = controls.getPlayer();
 
         loadingOverlay.style.display = "flex";
+        loadingText.innerText = "Initializing player...";
         retryButton.style.display = "none";
 
         ui.configure({
@@ -273,6 +280,7 @@
 
         async function tryLoadWithToken(token, label) {
             try {
+                loadingText.innerText = `Attempting to load stream (${label})...`;
                 currentToken = token;
                 await player.load(streamURL);
                 console.log(`✅ Token (${label}) successful`);
@@ -283,6 +291,7 @@
                 return true;
             } catch (err) {
                 console.warn(`⚠️ Token (${label}) failed:`, err);
+                loadingText.innerText = `Stream failed. Retrying... (${err.code || err.message})`;
                 await player.unload();
                 return false;
             }
@@ -300,10 +309,11 @@
         }
 
         console.error("😢 All tokens failed.");
+        loadingText.innerText = "Sorry, all attempts to load the stream failed.";
         retryButton.style.display = "inline-block";
     }
 
-    // --- PART 3: EVENT LISTENERS ---
+    // --- PART 3: EVENT LISTENERS (Same as before) ---
     function makeControlsFocusable() {
         const controls = document.querySelectorAll('[data-shaka-player-container] button, [data-shaka-player-container] input');
         controls.forEach(control => {
@@ -322,13 +332,13 @@
     function onPlayerErrorEvent(errorEvent) { onPlayerError(errorEvent.detail); }
     function onPlayerError(error) {
         console.error('Error code', error.code, 'object', error);
+        loadingText.innerText = `Player Error: ${error.code} - ${error.message}`;
         loadingOverlay.style.display = 'flex';
-        retryButton.style.display = 'inline-block';
     }
     function onUIErrorEvent(errorEvent) { onPlayerError(errorEvent.detail); }
     function initFailed(errorEvent) { 
         console.error('❌ Unable to load the UI library!'); 
-        retryButton.style.display = 'inline-block';
+        loadingText.innerText = "Error: Shaka Player UI failed to load.";
     }
     function retryStream() {
         console.log('🔁 Retry requested by user');
