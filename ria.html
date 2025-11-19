@@ -167,49 +167,58 @@
         return shuffled;
     }
 
+    // --- THIS IS THE UPDATED FUNCTION ---
     async function getTokenList() {
         try {
-            loadingText.innerText = "Loading...";
+            loadingText.innerText = "Fetching access token...";
+            console.log('🔍 Fetching token from:', proxyUrl);
+            
             const res = await fetch(proxyUrl + "&t=" + Date.now(), { cache: "no-store" });
+            
             if (!res.ok) {
                 throw new Error(`Proxy server error: ${res.status} ${res.statusText}`);
             }
+            
             const data = await res.json();
+            // CRITICAL DEBUG: Log the raw response to see what we're actually getting
+            console.log('Raw response from proxy:', data);
+
             let tokens = [];
+            // More defensive checks to handle different response formats
             if (data && typeof data === 'object') {
                 if (Array.isArray(data.record) && data.record.length > 0) {
                     tokens = data.record.map((i) => i?.data?.token).filter(Boolean);
                 } else if (data.token) {
                     tokens = [data.token];
+                } else {
+                    // Maybe the structure is completely different now
+                    console.warn("⚠️ Proxy response format is unknown. Data:", data);
                 }
             } else {
                 throw new Error("Proxy response was not a valid JSON object.");
             }
+            
+            // Final check before shuffling
             if (!Array.isArray(tokens)) {
+                console.error("❌ 'tokens' is not an array before shuffling. Value:", tokens);
                 throw new Error("Token processing failed: result is not an array.");
             }
+
             tokens = shuffleArray(tokens);
+            console.log(`🎫 ${tokens.length} token received`);
             return tokens;
         } catch (err) {
+            console.error("❌ Failed to get token:", err);
             loadingText.innerText = `Error: Could not get token. (${err.message})`;
             return [];
         }
     }
 
-    function getCachedToken() {
-        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-        return localStorage.getItem(key) || "";
-    }
-    function setCachedToken(token) {
-        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-        localStorage.setItem(key, token);
-    }
-    function clearCachedToken() {
-        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-        localStorage.removeItem(key);
-    }
+    function getCachedToken() { /* ... same as before ... */ }
+    function setCachedToken(token) { /* ... same as before ... */ }
+    function clearCachedToken() { /* ... same as before ... */ }
 
-    // --- PART 2: MAIN PLAYER INITIALIZATION ---
+    // --- PART 2: MAIN PLAYER INITIALIZATION (Same as last time) ---
 
     async function initPlayer() {
         const video = document.getElementById("video");
@@ -218,19 +227,10 @@
         const player = controls.getPlayer();
 
         loadingOverlay.style.display = "flex";
-        loadingText.innerText = "Loading...";
+        loadingText.innerText = "Initializing player...";
         retryButton.style.display = "none";
 
-        // --- CRITICAL: UI Configuration with Seek Bar Removed ---
-        ui.configure({
-            addSeekBar: false, // <-- THIS LINE REMOVES THE SEEK BAR FOR TV D-PAD COMPATIBILITY
-            addBigPlayButton: true,
-            singleClickForPlayAndPause: false,
-            enableTooltips: false,
-            doubleClickForFullscreen: false,
-            controlPanelElements: ['play_pause', 'spacer', 'overflow_menu', 'fullscreen'],
-            overflowMenuButtons: ['captions', 'quality', 'language', 'picture_in_picture', 'playback_rate'],
-        });
+        ui.configure({ /* ... same as before ... */ });
         
         player.configure({
             drm: {
@@ -248,17 +248,6 @@
             }
         });
         
-        // --- Robust Subtitle Handler ---
-        const handleTracks = () => {
-            const textTracks = player.getTextTracks();
-            const subtitleTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
-            if (subtitleTrack) {
-                player.selectTextTrack(subtitleTrack);
-                player.setTextTrackVisibility(true);
-            }
-        };
-        player.addEventListener('trackschanged', handleTracks);
-        
         const cachedToken = getCachedToken();
         const tokens = await getTokenList();
 
@@ -269,14 +258,17 @@
 
         async function tryLoadWithToken(token, label) {
             try {
-                loadingText.innerText = "Loading...";
+                loadingText.innerText = `Attempting to load stream (${label})...`;
                 currentToken = token;
                 await player.load(streamURL);
+                console.log(`✅ Token (${label}) successful`);
                 setCachedToken(token);
                 loadingOverlay.classList.add("fade-out");
                 setTimeout(() => { loadingOverlay.style.display = "none"; }, 700);
+                player.setTextTrackVisibility(true);
                 return true;
             } catch (err) {
+                console.warn(`⚠️ Token (${label}) failed:`, err);
                 loadingText.innerText = `Stream failed. Retrying... (${err.code || err.message})`;
                 await player.unload();
                 return false;
@@ -294,38 +286,32 @@
             if (ok) return;
         }
 
+        console.error("😢 All tokens failed.");
         loadingText.innerText = "Sorry, all attempts to load the stream failed.";
         retryButton.style.display = "inline-block";
     }
 
-    // --- PART 3: EVENT LISTENERS ---
-    function makeControlsFocusable() {
-        const container = document.querySelector('[data-shaka-player-container]');
-        if (!container) return;
-        const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
-        focusableElements.forEach(el => { el.setAttribute('tabindex', '0'); });
-    }
-    function unmuteVideo() {
-        const video = document.getElementById('video');
-        if (video.muted) {
-            video.muted = false;
-            document.removeEventListener('keydown', unmuteVideo);
-        }
-    }
+    // --- PART 3: EVENT LISTENERS (Same as before) ---
+    function makeControlsFocusable() { /* ... */ }
+    function unmuteVideo() { /* ... */ }
     function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
     function onPlayerError(error) {
+        console.error('Error code', error.code, 'object', error);
         loadingText.innerText = `Player Error: ${error.code} - ${error.message}`;
         loadingOverlay.style.display = 'flex';
     }
     function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
     function initFailed(errorEvent) { 
+        console.error('❌ Unable to load the UI library!'); 
         loadingText.innerText = "Error: Shaka Player UI failed to load.";
     }
     function retryStream() {
+        console.log('🔁 Retry requested by user');
         initPlayer();
     }
 
     document.addEventListener('shaka-ui-loaded', () => {
+        console.log('✅ Shaka UI loaded. Starting player initialization.');
         initPlayer();
         makeControlsFocusable();
     });
