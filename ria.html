@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>PROSTREAM-ASTRO-RIA(VIP)</title>
+    <title>PROSTREAM-ASTRO RIA</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Google Fonts for a professional watermark font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,7 +25,6 @@
             height: 100%;
             background-color: #000;
             overflow: hidden;
-            -webkit-tap-highlight-color: transparent;
         }
 
         [data-shaka-player-container] {
@@ -56,16 +55,7 @@
             letter-spacing: 2px;
         }
 
-        [data-shaka-player-container] *:focus {
-            outline: 2px solid #ffcc00 !important;
-            background-color: rgba(255, 204, 0, 0.2) !important;
-        }
-        
-        [data-shaka-player-container] button {
-             -webkit-appearance: none;
-        }
-
-        /* Loading overlay styles */
+        /* Loading Overlay Styles */
         #loading-overlay {
             position: absolute;
             top: 0;
@@ -79,54 +69,42 @@
             align-items: center;
             z-index: 1000;
             color: white;
-            transition: opacity 0.7s ease;
+            font-family: sans-serif;
         }
-
-        #loading-overlay.fade-out {
-            opacity: 0;
-        }
-
         .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
             width: 50px;
             height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
+            animation: spin 1s linear infinite;
             margin-bottom: 20px;
         }
-
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-
-        #loading-text {
-            font-family: 'Roboto', sans-serif;
-            font-size: 1.2rem;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
         #retry-button {
-            background-color: #ffcc00;
-            color: #000;
-            border: none;
             padding: 10px 20px;
-            border-radius: 5px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: bold;
+            font-size: 16px;
             cursor: pointer;
-            display: none;
-            -webkit-tap-highlight-color: transparent;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-top: 20px;
         }
 
-        #retry-button:hover {
-            background-color: #ff9900;
+        [data-shaka-player-container] *:focus {
+            outline: 2px solid #ffcc00 !important;
+            background-color: rgba(255, 204, 0, 0.2) !important;
+        }
+        
+        [data-shaka-player-container] button {
+             -webkit-appearance: none;
         }
 
-        /* 
-         * --- Caption Styling ---
-        */
+        /* Caption Styling */
         [data-shaka-player-container] .shaka-text-container {
             position: absolute !important;
             top: 85% !important;
@@ -137,14 +115,11 @@
             padding: 0 !important;
             box-sizing: border-box !important;
             z-index: 10 !important;
-
-            /* Clamp to 2 lines */
             display: -webkit-box !important;
             -webkit-line-clamp: 2 !important;
             -webkit-box-orient: vertical !important;
             overflow: hidden !important;
         }
-
         [data-shaka-player-container] .shaka-text-container span {
             background-color: rgba(0, 0, 0, 0.8) !important;
             color: white !important;
@@ -154,472 +129,206 @@
             line-height: 1.4 !important;
             white-space: pre-wrap !important;
         }
-
-        /* Mobile-specific adjustments */
-        @media (max-width: 768px) {
-            #watermark {
-                font-size: 4vw;
-            }
-            
-            .shaka-controls-container {
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-        }
     </style>
 </head>
 <body>
 
-    <div data-shaka-player-container>
-        <video data-shaka-player id="video" playsinline></video>
-        <div id="watermark">PROSTREAM-RIA</div>
-    </div>
-
-    <!-- Loading overlay -->
+    <!-- Loading Overlay -->
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <div id="loading-text">Sila tunggu beberapa saat..</div>
-        <button id="retry-button" onclick="retryStream()">Cuba Lagi</button>
+        <div id="loading-text">Initializing stream...</div>
+        <button id="retry-button" style="display: none;">Retry</button>
+    </div>
+
+    <div data-shaka-player-container>
+        <video data-shaka-player id="video"></video>
+        <div id="watermark">PROSTREAM-ASTRO RIA</div>
     </div>
 
     <script>
-        // Channel configuration
-        const channel = "astro-ria";
-        const streamURL = "https://l16.dp.sooka.my/1004/linear/index.mpd";
-        const proxyUrl =
-          "https://script.google.com/macros/s/AKfycbyXIJGv8aTWAqkpTnzxrZp5RO-OnZC-JjHtbd9xFn0mc4gyrYShs01zEOO18XDG5iqE/exec?key=riatvmalaysia&channel=" +
-          channel;
+    // --- PART 1: CONFIGURATION & HELPER FUNCTIONS ---
 
-        // DOM elements
-        const loadingOverlay = document.getElementById("loading-overlay");
-        const loadingText = document.getElementById("loading-text");
-        const spinner = document.querySelector(".spinner");
-        const retryButton = document.getElementById("retry-button");
+    const channel = "astro-ria";
+    const streamURL = "https://l16.dp.sooka.my/1004/linear/index.mpd";
+    const proxyUrl = "https://script.google.com/macros/s/AKfycbyXIJGv8aTWAqkpTnzxrZp5RO-OnZC-JjHtbd9xFn0mc4gyrYShs01zEOO18XDG5iqE/exec?key=riatvmalaysia&channel=" + channel;
+    
+    const loadingOverlay = document.getElementById("loading-overlay");
+    const loadingText = document.getElementById("loading-text");
+    const retryButton = document.getElementById("retry-button");
 
-        // Detect if running in WebView
-        const isWebView = (() => {
-            const userAgent = navigator.userAgent.toLowerCase();
-            return userAgent.includes('wv') || 
-                   (userAgent.includes('android') && !/chrome/.test(userAgent)) ||
-                   (userAgent.includes('iphone') || userAgent.includes('ipad')) && 
-                   !userAgent.includes('safari');
-        })();
+    // This variable will hold the token for the request filter to use
+    let currentToken = null;
 
-        // Helper functions
-        function shuffleArray(array) {
-          let shuffled = [...array];
-          for (let i = shuffled.length - 1; i > 0; i--) {
+    function shuffleArray(array) {
+        let shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-          }
-          return shuffled;
         }
+        return shuffled;
+    }
 
-        async function getTokenList() {
-          try {
-            // For WebView, try different fetch options
-            const fetchOptions = {
-              cache: "no-store",
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
-            };
-            
-            // Add mode based on environment
-            if (isWebView) {
-              // WebView might not support CORS mode
-              fetchOptions.mode = 'no-cors';
-            } else {
-              fetchOptions.mode = 'cors';
-            }
-            
-            const res = await fetch(proxyUrl + "&t=" + Date.now(), fetchOptions);
-            
-            // Handle different response types
-            let data;
-            try {
-              data = await res.json();
-            } catch (e) {
-              // If JSON parsing fails, try text
-              const text = await res.text();
-              console.log('Response text:', text);
-              throw new Error("Invalid response format");
-            }
-            
+    async function getTokenList() {
+        try {
+            const res = await fetch(proxyUrl + "&t=" + Date.now(), { cache: "no-store" });
+            const data = await res.json();
             if (!data.ok) throw new Error("Proxy invalid");
             let tokens = [];
             if (Array.isArray(data.record)) {
-              tokens = data.record.map((i) => i?.data?.token).filter(Boolean);
+                tokens = data.record.map((i) => i?.data?.token).filter(Boolean);
             } else if (data.token) {
-              tokens = [data.token];
+                tokens = [data.token];
             }
             tokens = shuffleArray(tokens);
-            console.log(`🎫 ${tokens.length} token diterima`);
+            console.log(`🎫 ${tokens.length} token received`);
             return tokens;
-          } catch (err) {
-            console.error("❌ Gagal ambil token:", err);
+        } catch (err) {
+            console.error("❌ Failed to get token:", err);
             return [];
-          }
         }
+    }
 
-        function getCachedToken() {
-          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-          return localStorage.getItem(key) || "";
-        }
-        
-        function setCachedToken(token) {
-          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-          localStorage.setItem(key, token);
-          console.log(`💾 Cache token ${channel}: ${token.substring(0, 25)}...`);
-        }
-        
-        function clearCachedToken() {
-          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-          localStorage.removeItem(key);
-        }
+    function getCachedToken() {
+        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
+        return localStorage.getItem(key) || "";
+    }
+    function setCachedToken(token) {
+        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
+        localStorage.setItem(key, token);
+        console.log(`💾 Cached token for ${channel}: ${token.substring(0, 25)}...`);
+    }
+    function clearCachedToken() {
+        const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
+        localStorage.removeItem(key);
+    }
 
-        function makeControlsFocusable() {
-            console.log('🎯 Making controls focusable for D-pad navigation...');
-            const container = document.querySelector('[data-shaka-player-container]');
-            if (!container) return;
-            const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
-            focusableElements.forEach(el => {
-                el.setAttribute('tabindex', '0');
-            });
-            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
-        }
+    // --- PART 2: MAIN PLAYER INITIALIZATION ---
 
-        function ensureFocus() {
-            const container = document.querySelector('[data-shaka-player-container]');
-            const overflowButton = document.querySelector('.shaka-overflow-menu-button');
-            if (container && overflowButton && !container.contains(document.activeElement)) {
-                overflowButton.focus();
-            }
-        }
-        
-        function unmuteVideo() {
-            const video = document.getElementById('video');
-            if (video.muted) {
-                video.muted = false;
-                console.log('🔊 Video has been unmuted.');
-                document.removeEventListener('keydown', unmuteVideo);
-            }
-        }
+    async function initPlayer() {
+        const video = document.getElementById("video");
+        const ui = video['ui'];
+        const controls = ui.getControls();
+        const player = controls.getPlayer();
 
-        // Enhanced error handling for mobile
-        function onPlayerErrorEvent(errorEvent) { 
-            const error = errorEvent.detail;
-            console.error('Error code', error.code, 'object', error);
-            
-            // Mark the error as handled to prevent unhandled promise rejections
-            error.handled = true;
-            
-            // Handle DRM-related errors specifically
-            if (error.code === shaka.util.Error.Code.LICENSE_REQUEST_FAILED || 
-                error.code === shaka.util.Error.Code.NO_LICENSE_SERVER_GIVEN ||
-                error.code === 4032 ||  // DRM specific error code
-                error.code === 4012) {  // Another DRM related error
-                console.error('DRM license error. The stream might require proper licensing.');
-                loadingText.innerText = "Maaf, isu lesen DRM. Sila cuba lagi.";
-            }
-        }
-        
-        function onPlayerError(error) { 
-            console.error('Error code', error.code, 'object', error);
-            
-            // Mark the error as handled to prevent unhandled promise rejections
-            error.handled = true;
-            
-            // Handle DRM-related errors specifically
-            if (error.code === shaka.util.Error.Code.LICENSE_REQUEST_FAILED || 
-                error.code === shaka.util.Error.Code.NO_LICENSE_SERVER_GIVEN ||
-                error.code === 4032 ||  // DRM specific error code
-                error.code === 4012) {  // Another DRM related error
-                console.error('DRM license error. The stream might require proper licensing.');
-                loadingText.innerText = "Maaf, isu lesen DRM. Sila cuba lagi.";
-            }
-        }
-        
-        function onUIErrorEvent(errorEvent) { 
-            const error = errorEvent.detail;
-            error.handled = true;
-            onPlayerError(error);
-        }
-        
-        function initFailed(errorEvent) { 
-            console.error('❌ Unable to load the UI library!'); 
-            if (errorEvent && errorEvent.detail) {
-                errorEvent.detail.handled = true;
-            }
-        }
+        // Show loading overlay
+        loadingOverlay.style.display = "flex";
+        loadingText.innerText = "Please wait a moment...";
+        retryButton.style.display = "none";
 
-        // Global error handler to catch unhandled promise rejections
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-            // Mark the error as handled if it's a Shaka error
-            if (event.reason && event.reason.handled !== true) {
-                event.reason.handled = true;
-            }
-            event.preventDefault();
+        // --- UI Configuration ---
+        ui.configure({
+            addSeekBar: false,
+            addBigPlayButton: true,
+            singleClickForPlayAndPause: false,
+            enableTooltips: false,
+            doubleClickForFullscreen: false,
+            // NOTE: Removed 'skip_previous' and 'skip_next' as they are not valid controls
+            controlPanelElements: ['play_pause', 'spacer', 'overflow_menu', 'fullscreen'],
+            overflowMenuButtons: ['captions', 'quality', 'language', 'chapter', 'picture_in_picture', 'playback_rate'],
         });
 
-        // Mobile-specific initialization
-        async function initPlayer() {
-          spinner.style.display = "block";
-          loadingText.innerText = "Sila tunggu beberapa saat..";
-          retryButton.style.display = "none";
-          loadingOverlay.style.display = "flex";
-
-          const cachedToken = getCachedToken();
-          const tokens = await getTokenList();
-
-          const video = document.querySelector("video");
-          const ui = video["ui"];
-          const controls = ui.getControls();
-          let player = controls.getPlayer();
-
-          // Configure player with mobile-specific settings
-          const playerConfig = {
+        // --- Player Configuration (Done ONCE) ---
+        player.configure({
             drm: {
-              clearKeys: {
-                "c15541e4dde34c48a0d144a4b0ab7194":"ce82e3d81126183e5a262e320f6348b3",
-                "d5249cb40505495494828f42c37087cb":"d59f6a7bed00bd5348355ab5b3ee6aa0",
-              },
+                clearKeys: {
+                    "c15541e4dde34c48a0d144a4b0ab7194":"ce82e3d81126183e5a262e320f6348b3",
+                    "d5249cb40505495494828f42c37087cb":"d59f6a7bed00bd5348355ab5b3ee6aa0",
+                },
             },
-            streaming: {
-                lowLatencyMode: !isWebView, // Disable low latency mode for WebView
-                bufferBehind: 10,
-                // Add mobile-specific buffering
-                rebufferingGoal: 2,
-                bufferingGoal: 10,
-            },
-          };
+        });
 
-          // Add additional configuration for WebView
-          if (isWebView) {
-            playerConfig.streaming.abr = {
-              enabled: true,
-              defaultBandwidthEstimate: 1000000, // 1 Mbps default for mobile
-              switchInterval: 5, // Switch less frequently on mobile
-            };
-          }
-
-          player.configure(playerConfig);
-
-          // Configure UI with mobile-friendly settings
-          const uiConfig = {
-            addSeekBar: true, // Enable seek bar for mobile
-            addBigPlayButton: true,
-            singleClickForPlayAndPause: true, // Enable for mobile
-            enableTooltips: false,
-            doubleClickForFullscreen: true, // Enable for mobile
-            controlPanelElements: [
-              'play_pause',
-              'time_and_duration',
-              'spacer',
-              'overflow_menu',
-              'fullscreen',
-            ],
-            overflowMenuButtons: [
-              'captions',
-              'quality',
-              'language',
-              'picture_in_picture',
-              'playback_rate',
-            ],
-          };
-
-          // Remove unsupported features for WebView
-          if (isWebView) {
-            uiConfig.overflowMenuButtons = uiConfig.overflowMenuButtons.filter(
-              button => button !== 'picture_in_picture'
-            );
-          }
-
-          ui.configure(uiConfig);
-
-          // ✅ AUTO ENABLE SUBTITLE (for Sooka embedded subtitles)
-          player.setTextTrackVisibility(true);
-          player.addEventListener('trackschanged', () => {
-            player.setTextTrackVisibility(true);
-            console.log('🎬 Subtitle auto-enabled selepas track detected');
+        // --- Register the Request Filter (Done ONCE) ---
+        // This filter will use the `currentToken` variable. We just need to set `currentToken` before loading.
+        player.getNetworkingEngine().registerRequestFilter((type, request) => {
+            if (!currentToken) return; // Don't do anything if we don't have a token yet
             
-            // Check for caption tracks
-            const textTracks = player.getTextTracks();
-            const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
-
-            if (captionTrack) {
-                console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
-                player.selectTextTrack(captionTrack);
-                player.setTextTrackVisibility(true);
-                console.log('🎬 Caption track selected and enabled.');
-            } else {
-                console.log('🎬 No subtitle track found.');
+            if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                request.headers["authorization"] = "Bearer " + currentToken;
             }
-          });
+        });
 
-          // Setup event listeners
-          player.addEventListener('error', onPlayerErrorEvent);
-          controls.addEventListener('error', onUIErrorEvent);
-          
-          // Mobile-specific event handling
-          video.addEventListener('playing', () => {
-            setTimeout(unmuteVideo, 500);
-          });
+        // --- Token Loading Logic ---
+        const cachedToken = getCachedToken();
+        const tokens = await getTokenList();
 
-          // Add touch event handling for mobile
-          video.addEventListener('touchstart', function(e) {
-            // Toggle controls on touch
-            if (e.touches.length === 1) {
-              const controls = document.querySelector('.shaka-controls-container');
-              if (controls) {
-                controls.style.display = controls.style.display === 'none' ? 'block' : 'none';
-              }
-            }
-          });
-
-          async function tryToken(token, label) {
+        async function tryLoadWithToken(token, label) {
             try {
-              player.destroy().catch(() => {});
-              await new Promise((r) => setTimeout(r, 300));
-              player = new shaka.Player(video);
-              
-              // Reconfigure the new player
-              player.configure(playerConfig);
+                // Set the token for the filter to use
+                currentToken = token;
 
-              // Register request filter (Authorization)
-              player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                if (
-                  type === shaka.net.NetworkingEngine.RequestType.MANIFEST ||
-                  type === shaka.net.NetworkingEngine.RequestType.SEGMENT
-                ) {
-                  request.headers["authorization"] = "Bearer " + token;
-                }
-              });
+                // Try to load the stream
+                await player.load(streamURL);
+                console.log(`✅ Token (${label}) successful`);
+                setCachedToken(token);
 
-              await player.load(streamURL);
-              console.log(`✅ Token (${label}) OK`);
-              setCachedToken(token);
+                loadingOverlay.classList.add("fade-out");
+                setTimeout(() => { loadingOverlay.style.display = "none"; }, 700);
 
-              loadingOverlay.classList.add("fade-out");
-              setTimeout(() => { loadingOverlay.style.display = "none"; }, 700);
-
-              // Pastikan subtitle kekal ON lepas load
-              player.setTextTrackVisibility(true);
-
-              // Reattach UI to new player
-              ui.configure(uiConfig);
-
-              // Setup event listeners for new player
-              player.addEventListener('error', onPlayerErrorEvent);
-              player.addEventListener('trackschanged', () => {
                 player.setTextTrackVisibility(true);
-                console.log('🎬 Subtitle auto-enabled selepas track detected');
-                
-                // Check for caption tracks
-                const textTracks = player.getTextTracks();
-                const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
-
-                if (captionTrack) {
-                    console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
-                    player.selectTextTrack(captionTrack);
-                    player.setTextTrackVisibility(true);
-                    console.log('🎬 Caption track selected and enabled.');
-                } else {
-                    console.log('🎬 No subtitle track found.');
-                }
-              });
-
-              // Mobile-specific autoplay
-              try {
-                // For mobile, we need to handle autoplay differently
-                if (isWebView) {
-                  // In WebView, we might need user interaction
-                  video.muted = true;
-                  await video.play();
-                  console.log('✅ Autoplay started (muted). Will unmute shortly.');
-                } else {
-                  await video.play();
-                  console.log('✅ Autoplay started');
-                }
-              } catch (error) {
-                console.error('Error starting playback:', error);
-                
-                // Show a play button if autoplay fails
-                const playButton = document.createElement('button');
-                playButton.textContent = 'Play';
-                playButton.style.position = 'absolute';
-                playButton.style.top = '50%';
-                playButton.style.left = '50%';
-                playButton.style.transform = 'translate(-50%, -50%)';
-                playButton.style.padding = '10px 20px';
-                playButton.style.fontSize = '16px';
-                playButton.style.backgroundColor = '#ffcc00';
-                playButton.style.color = '#000';
-                playButton.style.border = 'none';
-                playButton.style.borderRadius = '5px';
-                playButton.style.zIndex = '1001';
-                
-                playButton.addEventListener('click', async () => {
-                  try {
-                    await video.play();
-                    playButton.remove();
-                  } catch (e) {
-                    console.error('Manual play failed:', e);
-                  }
-                });
-                
-                document.body.appendChild(playButton);
-              }
-
-              return true;
+                return true;
             } catch (err) {
-              console.warn(`⚠️ Token (${label}) gagal: ${err.message}`);
-              return false;
+                console.warn(`⚠️ Token (${label}) failed: ${err.message}`);
+                // Unload the failed attempt to clean up the player's state before trying again
+                await player.unload();
+                return false;
             }
-          }
+        }
 
-          if (cachedToken) {
-            const ok = await tryToken(cachedToken, "cached");
+        if (cachedToken) {
+            const ok = await tryLoadWithToken(cachedToken, "cached");
             if (ok) return;
             clearCachedToken();
-          }
+        }
 
-          for (let i = 0; i < tokens.length; i++) {
-            const ok = await tryToken(tokens[i], `list ke-${i + 1}`);
+        for (let i = 0; i < tokens.length; i++) {
+            const ok = await tryLoadWithToken(tokens[i], `list item ${i + 1}`);
             if (ok) return;
-          }
-
-          console.error("😢 Semua token gagal.");
-          spinner.style.display = "none";
-          loadingText.innerText = "Maaf, siaran ini bermasalah sekarang.";
-          retryButton.style.display = "inline-block";
         }
 
-        function retryStream() {
-          console.log("🔁 Cuba semula diminta user");
-          initPlayer();
+        console.error("😢 All tokens failed.");
+        loadingText.innerText = "Sorry, the stream is currently unavailable.";
+        retryButton.style.display = "inline-block";
+    }
+
+    // --- PART 3: EVENT LISTENERS ---
+
+    function makeControlsFocusable() {
+        console.log('🎯 Making controls focusable...');
+        const container = document.querySelector('[data-shaka-player-container]');
+        if (!container) return;
+        const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
+        focusableElements.forEach(el => { el.setAttribute('tabindex', '0'); });
+        console.log(`✅ Made ${focusableElements.length} elements focusable.`);
+    }
+    function unmuteVideo() {
+        const video = document.getElementById('video');
+        if (video.muted) {
+            video.muted = false;
+            console.log('🔊 Video has been unmuted.');
+            document.removeEventListener('keydown', unmuteVideo);
         }
+    }
+    function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
+    function onPlayerError(error) { console.error('Error code', error.code, 'object', error); }
+    function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
+    function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
+    function retryStream() {
+        console.log('🔁 Retry requested by user');
+        initPlayer();
+    }
 
-        // Mobile-specific initialization
-        document.addEventListener("DOMContentLoaded", () => {
-          if (shaka.Player.isBrowserSupported()) {
-            document.addEventListener('shaka-ui-loaded', () => {
-                initPlayer();
-                makeControlsFocusable();
-            });
-          } else console.error("❌ Shaka Player tidak disokong");
-        });
+    // --- EVENT LISTENERS ---
+    document.addEventListener('shaka-ui-loaded', () => {
+        console.log('✅ Shaka UI loaded. Starting player initialization.');
+        initPlayer();
+        makeControlsFocusable();
+    });
 
-        document.addEventListener('keydown', unmuteVideo);
-        
-        document.addEventListener('keydown', (e) => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
-                setTimeout(ensureFocus, 0);
-            }
-        });
+    document.addEventListener('shaka-ui-load-failed', initFailed);
+    document.addEventListener('keydown', unmuteVideo);
+    document.getElementById('retry-button').addEventListener('click', retryStream);
 
-        document.addEventListener('shaka-ui-load-failed', initFailed);
-    </script>
+</script>
+
 </body>
 </html>
