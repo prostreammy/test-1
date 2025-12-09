@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Modern Stream Player (Shaka Engine v4.4.2) - PerfectTV</title>
+    
+    <!-- Shaka Player UI compiled library and CSS - Version 4.4.2 from cdnjs -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.4.2/controls.min.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.4.2/shaka-player.ui.min.js" crossorigin="anonymous"></script>
+    
+    <!-- Mux.js for additional stream support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mux.js/5.11.3/mux.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- Core Styling --- */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #0f0f0f; /* YouTube's dark background */
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        #container {
+            max-width: 900px;
+            width: 100%;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            background-color: #000;
+            position: relative; /* Added for watermark positioning */
+        }
+
+        [data-shaka-player-container] {
+            width: 100%;
+            aspect-ratio: 16/9;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* --- Watermark Styling --- */
+        .watermark {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 28px;
+            font-weight: 500;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* --- Debug Box Styling --- */
+        #debug-box {
+            width: 100%;
+            max-width: 900px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Roboto Mono', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #debug-box h3 { margin-top: 0; color: #fff; }
+        .error { color: #ff4757; }
+        .success { color: #2ed573; }
+        .info { color: #74c0fc; }
+        .warning { color: #ffa502; }
+
+        /* --- YouTube-Style Shaka Player UI Overrides --- */
+        .shaka-video-container .shaka-bottom-controls,
+        .shaka-video-container .shaka-top-controls {
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            backdrop-filter: blur(5px);
+            padding: 10px 20px;
+        }
+        .shaka-video-container .shaka-top-controls { background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
+
+        /* Buttons - YouTube-like icons and feel */
+        .shaka-video-container .shaka-play-button,
+        .shaka-video-container .shaka-mute-button,
+        .shaka-video-container .shaka-captions-button,
+        .shaka-video-container .shaka-overflow-menu-button,
+        .shaka-video-container .shaka-fullscreen-button,
+        .shaka-video-container .shaka-pip-button {
+            background: none !important;
+            color: #fff !important;
+            font-size: 24px !important;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .shaka-video-container .shaka-play-button:hover,
+        .shaka-video-container .shaka-mute-button:hover,
+        .shaka-video-container .shaka-captions-button:hover,
+        .shaka-video-container .shaka-overflow-menu-button:hover,
+        .shaka-video-container .shaka-fullscreen-button:hover,
+        .shaka-video-container .shaka-pip-button:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Seek Bar - YouTube's red progress bar */
+        .shaka-video-container .shaka-seek-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+        .shaka-video-container .shaka-seek-bar .shaka-played-range,
+        .shaka-video-container .shaka-seek-bar .shaka-ad-breaks {
+            background: #ff0000; /* YouTube Red */
+        }
+        .shaka-video-container .shaka-seek-bar .shaka-buffered-range {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        .shaka-video-container .shaka-seek-bar-container:hover .shaka-seek-bar {
+            height: 6px;
+        }
+        .shaka-video-container .shaka-seek-bar .shaka-thumb {
+            background: #ff0000;
+            border: 2px solid #fff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .shaka-video-container .shaka-seek-bar-container:hover .shaka-thumb {
+            opacity: 1;
+        }
+
+        /* Volume Bar */
+        .shaka-video-container .shaka-volume-bar {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .shaka-video-container .shaka-volume-bar .shaka-played-range {
+            background: #ff0000;
+        }
+
+        /* Overflow Menu */
+        .shaka-video-container .shaka-overflow-menu {
+            background: rgba(28, 28, 28, 0.95);
+            border-radius: 8px;
+            border: none;
+            backdrop-filter: blur(10px);
+        }
+        .shaka-video-container .shaka-overflow-menu li {
+            color: #fff;
+            transition: background 0.2s;
+            padding: 10px 15px;
+        }
+        .shaka-video-container .shaka-overflow-menu li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .shaka-video-container .shaka-overflow-menu li[aria-checked="true"] {
+            color: #ff0000;
+        }
+
+        /* Time & Duration Display */
+        .shaka-video-container .shaka-time-and-duration {
+            color: #fff;
+            font-size: 13px;
+            text-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+
+        /* Hide the big center play button to match YouTube's minimal look */
+        .shaka-video-container .shaka-play-button-container {
+            display: none;
+        }
+
+        /* Channel Selection Styling */
+        .channel-selector {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 20px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .channel-selector select, .channel-selector button {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background-color: #2a2a2a;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        .channel-selector button {
+            background-color: #ff0000;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .channel-selector button:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="channel-selector">
+        <h3>Channel Selection</h3>
+        <select id="channel-select">
+            <option value="riahd">RIA HD</option>
+            <!-- Add more channels here as needed -->
+        </select>
+        <button id="load-channel">Load Channel</button>
+    </div>
+
+    <div id="container">
+        <div data-shaka-player-container>
+            <video autoplay data-shaka-player id="video" style="width: 100%; height: 100%;" poster=""></video>
+        </div>
+        <div class="watermark">PROSTREAM- PerfectTV</div>
+    </div>
+
+    <div id="debug-box">
+        <h3>Debug Information</h3>
+        <div id="debug-content">Initializing player...</div>
+    </div>
+
+    <script>
+        const debugContent = document.getElementById('debug-content');
+        const channelSelect = document.getElementById('channel-select');
+        const loadChannelButton = document.getElementById('load-channel');
+
+        function log(message, type = 'info') {
+            debugContent.innerHTML += `<span class="${type}">[${new Date().toLocaleTimeString()}] ${message}</span>\n`;
+            debugContent.scrollTop = debugContent.scrollHeight;
+            console.log(message);
+        }
+
+        // Function to create a custom networking engine to add headers
+        function createNetworkingEngine() {
+            const factory = function(request) {
+                // Add custom headers to all requests
+                request.headers['X-PTV-App'] = 'Mozilla 5.0 Apple Web';
+                request.headers['X-PTV-Device'] = 'e5fc737d1f54b844';
+                request.headers['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+                
+                // Return a Promise that resolves with the response
+                return shaka.net.HttpRequestPlugin.defaultRequestFactory(request);
+            };
+            
+            shaka.net.NetworkingEngine.registerRequestFilter(function(type, request) {
+                // Add headers to segment requests
+                if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                    request.headers['X-PTV-App'] = 'Mozilla 5.0 Apple Web';
+                    request.headers['X-PTV-Device'] = 'e5fc737d1f54b844';
+                    request.headers['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+                }
+            });
+        }
+
+        async function initPlayer(channel) {
+            const video = document.getElementById('video');
+            const ui = video['ui'];
+            const controls = ui.getControls();
+            const player = controls.getPlayer();
+
+            // Configure networking engine with custom headers
+            createNetworkingEngine();
+
+            // Configure player
+            player.configure({
+                streaming: {
+                    lowLatencyMode: true,
+                    rebufferingGoal: 0.01,
+                    bufferingGoal: 10,
+                    retryParameters: {
+                        maxAttempts: 5,
+                        baseDelay: 1000,
+                        backoffFactor: 2,
+                        fuzzFactor: 0.5,
+                        timeout: 30000
+                    }
+                }
+            });
+
+            player.addEventListener('error', (errorEvent) => {
+                log(`Player error: ${errorEvent.detail.code} - ${errorEvent.detail.message}`, 'error');
+            });
+
+            try {
+                // Build the URL with channel parameter
+                const perfectTvUrl = `https://load.perfecttv.net/mpd/ria/manifest.mpd?username=vip_3klp0es8&password=wg3piwEs&channel=${channel}`;
+                
+                log('Loading PerfectTV channel: ' + channel, 'info');
+                await player.load(perfectTvUrl);
+                log('✅ PerfectTV channel has been loaded!', 'success');
+            } catch (error) {
+                log(`Error while loading PerfectTV channel: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize with default channel
+        document.addEventListener('shaka-ui-loaded', () => {
+            initPlayer(channelSelect.value);
+        });
+
+        // Handle channel change
+        loadChannelButton.addEventListener('click', () => {
+            initPlayer(channelSelect.value);
+        });
+
+        document.addEventListener('shaka-ui-load-failed', () => {
+            log('Unable to load the Shaka Player UI library!', 'error');
+        });
+
+        // Check if Shaka Player is supported
+        document.addEventListener('DOMContentLoaded', () => {
+            if (shaka.Player.isBrowserSupported()) {
+                log('Browser is supported. Initializing Shaka Player...', 'info');
+            } else {
+                log("Shaka Player is not supported in this browser.", 'error');
+            }
+        });
+    </script>
+</body>
+</html>
