@@ -1,425 +1,307 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>119 Ria C Live Stream</title>
-    
-    <!-- Shaka Player for DASH streaming -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.1.1/shaka-player.compiled.js"></script>
-    
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            max-width: 900px;
-            width: 100%;
-        }
-        
-        .logo {
-            width: 60px;
-            height: 60px;
-            border-radius: 10px;
-            margin-right: 15px;
-            background-color: #222;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #e50914;
-        }
-        
-        .title {
-            flex-grow: 1;
-        }
-        
-        .title h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        
-        .title p {
-            color: #aaa;
-            font-size: 14px;
-        }
-        
-        .player-container {
-            position: relative;
-            width: 100%;
-            max-width: 900px;
-            background-color: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-        
-        video {
-            width: 100%;
-            display: block;
-        }
-        
-        .controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        
-        .player-container:hover .controls {
-            opacity: 1;
-        }
-        
-        .btn {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 18px;
-            margin-right: 15px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        .btn:hover {
-            transform: scale(1.1);
-        }
-        
-        .progress-container {
-            flex-grow: 1;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-            margin: 0 15px;
-            cursor: pointer;
-            position: relative;
-        }
-        
-        .progress {
-            height: 100%;
-            background: #e50914;
-            border-radius: 3px;
-            width: 0%;
-        }
-        
-        .time {
-            color: #fff;
-            font-size: 14px;
-            margin-right: 15px;
-            min-width: 100px;
-        }
-        
-        .volume-container {
-            display: flex;
-            align-items: center;
-        }
-        
-        .volume-slider {
-            width: 80px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
-            margin-left: 10px;
-            cursor: pointer;
-            position: relative;
-        }
-        
-        .volume-level {
-            height: 100%;
-            background: #e50914;
-            border-radius: 2px;
-            width: 100%;
-        }
-        
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: none;
-        }
-        
-        .loading.active {
-            display: block;
-        }
-        
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #e50914;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .status {
-            margin-top: 20px;
-            max-width: 900px;
-            width: 100%;
-            background-color: #1a1a1a;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        
-        .error {
-            color: #ff4757;
-        }
-        
-        .success {
-            color: #2ed573;
-        }
-        
-        .info {
-            color: #74b9ff;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Streaming Player — Ria</title>
+  <style>
+    :root{
+      --bg:#0f1720;
+      --card:#0b1220;
+      --muted:#9aa6b2;
+      --accent:#1f8feb;
+      --glass: rgba(255,255,255,0.03);
+    }
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:linear-gradient(180deg,#071024 0%, #071627 100%);color:#e6eef6}
+    .wrap{max-width:980px;margin:36px auto;padding:18px;}
+    .player-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:14px;box-shadow: 0 6px 30px rgba(2,6,23,0.6);display:grid;grid-template-columns:1fr 320px;gap:12px;align-items:start}
+    @media (max-width:880px){.player-card{grid-template-columns:1fr;}.sidebar{order:2}}
+    .video-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000}
+    video{width:100%;height:100%;display:block;background:#000;max-height:66vh}
+    .overlay{
+      position:absolute;left:12px;top:12px;display:flex;gap:10px;align-items:center;
+      background:var(--glass);padding:8px;border-radius:10px;backdrop-filter: blur(6px);
+    }
+    .title{font-weight:600}
+    .meta{font-size:13px;color:var(--muted)}
+    .controls{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .btn{
+      background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:inherit;
+      cursor:pointer;font-weight:600;min-width:44px;text-align:center
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .sidebar{padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-radius:10px}
+    .logo{width:100%;height:120px;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(255,255,255,0.02);border-radius:8px}
+    .logo img{max-width:100%;max-height:100%}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+    select,input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .small{font-size:13px;color:var(--muted);margin-top:8px}
+    .note{font-size:12px;color:var(--muted);margin-top:12px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .copyok{color:#7cf5a4;font-weight:600}
+  </style>
+  <!-- dash.js from CDN -->
+  <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">RIA</div>
-        <div class="title">
-            <h1>119 Ria C</h1>
-            <p>MALAYSIA • Live Entertainment Channel</p>
-        </div>
-    </div>
-    
-    <div class="player-container">
-        <video id="video" autoplay muted></video>
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-        </div>
-        <div class="controls">
-            <button class="btn" id="play-pause">
-                <i class="fas fa-pause"></i>
-            </button>
-            <div class="progress-container" id="progress-container">
-                <div class="progress" id="progress"></div>
-            </div>
-            <div class="time" id="time">00:00 / 00:00</div>
-            <div class="volume-container">
-                <button class="btn" id="mute">
-                    <i class="fas fa-volume-up"></i>
-                </button>
-                <div class="volume-slider" id="volume-slider">
-                    <div class="volume-level" id="volume-level"></div>
-                </div>
-            </div>
-            <button class="btn" id="fullscreen">
-                <i class="fas fa-expand"></i>
-            </button>
-        </div>
-    </div>
-    
-    <div class="status" id="status">
-        <div class="info">Initializing player...</div>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h2 style="margin:0">Ria — Live Stream</h2>
+        <div class="meta">Source: PerfectTV (DASH)</div>
+      </div>
+      <div class="meta">Made for VS Code Live Server</div>
     </div>
 
-    <script>
-        const video = document.getElementById('video');
-        const playPauseBtn = document.getElementById('play-pause');
-        const muteBtn = document.getElementById('mute');
-        const fullscreenBtn = document.getElementById('fullscreen');
-        const progressContainer = document.getElementById('progress-container');
-        const progress = document.getElementById('progress');
-        const volumeSlider = document.getElementById('volume-slider');
-        const volumeLevel = document.getElementById('volume-level');
-        const time = document.getElementById('time');
-        const loading = document.getElementById('loading');
-        const status = document.getElementById('status');
-        
-        // Stream configuration
-        const streamUrl = 'https://load.perfecttv.net/mpd/ria/manifest.mpd?username=vip_r92bmh1k&password=yb3IpqrB&channel=riafhd';
-        const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM4MjgwOTUsImlzcyI6IlZSIiwiZXhwIjoxNzYzODU2ODk1LCJ3bXZlciI6Mywid21pZGZtdCI6ImFzY2lpIiwid21pZHR5cCI6MSwid21rZXl2ZXIiOjMsIndtdG1pZHZlciI6NCwid21pZGxlbiI6NTEyLCJ3bW9waWQiOjMyLCJ3bWlkIjoiMWUxMGI5MDctMzVlOS00YjM2LTlkYWEtODBiNjBlYzViZmYyIiwiZmlsdGVyIjoiKHR5cGU9PVwidmlkZW9cIiYmRGlzcGxheUhlaWdodDw9NzIwKXx8KHR5cGU9PVwiYXVkaW9cIiYmZm91ckNDIT1cImFjLTNcIil8fCh0eXBlIT1cInZpZGVvXCImJnR5cGUhPVwiYXVkaW9cIikiLCJwYXR0ZXJuIjoiMTAwNCJ9.yalrS7Sl11Ussno81wF4vvHBt_KR6M5DBcncyhlRYyw';
-        const userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
-        
-        let player;
-        let isPlaying = true;
-        
-        function log(message, type = 'info') {
-            status.innerHTML += `<div class="${type}">${new Date().toLocaleTimeString()}: ${message}</div>`;
-            status.scrollTop = status.scrollHeight;
-            console.log(message);
+    <div class="player-card" role="region" aria-label="Streaming player">
+      <div>
+        <div class="video-wrap" id="videoContainer">
+          <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+
+          <div class="overlay" id="videoOverlay">
+            <img id="channelLogo" src="https://get.perfecttv.net/logo/ria.png" alt="logo" style="width:56px;height:32px;border-radius:4px;object-fit:contain">
+            <div>
+              <div class="title" id="channelTitle">119 Ria</div>
+              <div class="meta">MALAYSIA · DASH</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls" style="margin-top:12px">
+          <button id="playBtn" class="btn">Play</button>
+          <button id="pauseBtn" class="btn">Pause</button>
+          <button id="fsBtn" class="btn">Fullscreen</button>
+          <button id="copyBtn" class="btn">Copy URL</button>
+          <div style="flex:1"></div>
+          <div id="status" class="small">Ready</div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;align-items:center">
+          <label style="width:120px;margin:0">Quality</label>
+          <select id="qualitySelect" style="max-width:220px">
+            <option>Auto</option>
+          </select>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="logo"><img src="https://is.gd/prima.png" alt="group logo"></div>
+
+        <label>Manifest URL</label>
+        <input id="manifestInput" type="text" value="https://get.perfecttv.net/dash2.mpd?channel=astroria&username=vip_level7&password=vip_level7">
+
+        <label>ClearKey (KID:KEY)</label>
+        <input id="licenseInput" type="text" value="3f726fd5cbbf5944437a4dbfab431b10:376b009796e4ad50ea8f68d796676692">
+
+        <div class="note">
+          The player will attempt to use the provided ClearKey (hex KID:key). If blank, the player will try unauthenticated playback.
+        </div>
+
+        <button id="loadBtn" class="btn" style="margin-top:12px;width:100%">Load stream</button>
+
+        <div class="note" style="margin-top:14px">
+          Troubleshooting:
+          <ul style="padding-left:18px">
+            <li>Use Live Server or any HTTPS origin if browser blocks mixed content.</li>
+            <li>If DRM fails, confirm the license scheme and credentials are correct.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <div style="text-align:center;color:var(--muted);margin-top:12px">Player built with dash.js · Responsive · ClearKey helper</div>
+  </div>
+
+  <script>
+    // ====== Utility functions to convert hex -> base64url ======
+    function hexToUint8Array(hex) {
+      if (!hex) return new Uint8Array();
+      const clean = hex.replace(/[^0-9a-fA-F]/g, '');
+      const out = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < clean.length; i += 2) {
+        out[i / 2] = parseInt(clean.substr(i, 2), 16);
+      }
+      return out;
+    }
+    function uint8ToBase64Url(bytes) {
+      // bytes -> standard b64 -> base64url (no padding)
+      let binary = '';
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+      let b64 = btoa(binary);
+      // base64url
+      return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+
+    // ====== Player setup ======
+    const video = document.getElementById('videoPlayer');
+    let player = null;
+
+    const statusEl = document.getElementById('status');
+    function setStatus(s){ statusEl.textContent = s; }
+
+    // Default values from your playlist entry
+    const defaultManifest = document.getElementById('manifestInput').value.trim();
+    const defaultLicense = document.getElementById('licenseInput').value.trim();
+
+    // create/attach dash.js player (idempotent)
+    function createPlayer(manifestUrl, licenseHexPair) {
+      if (player) {
+        try { player.reset(); } catch(e) {}
+        player = null;
+      }
+
+      player = dashjs.MediaPlayer().create();
+      player.updateSettings({streaming: {scheduleWhilePaused: false}});
+      player.initialize(video, manifestUrl, false);
+
+      // Attach events for status & quality
+      player.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, function() {
+        setStatus('Stream initialized');
+        populateQuality();
+      });
+      player.on(dashjs.MediaPlayer.events.ERROR, function(e){
+        console.error('dashjs error', e);
+        setStatus('Error: ' + (e && e.error ? e.error : JSON.stringify(e)));
+      });
+
+      // If we have a license in hex (KID:KEY), attempt ClearKey injection
+      if (licenseHexPair && licenseHexPair.includes(':')) {
+        const parts = licenseHexPair.split(':').map(s => s.trim());
+        if (parts.length === 2 && parts[0].length && parts[1].length) {
+          try {
+            // Convert to base64url
+            const kidB64url = uint8ToBase64Url(hexToUint8Array(parts[0]));
+            const keyB64url = uint8ToBase64Url(hexToUint8Array(parts[1]));
+
+            // Build ClearKey JSON as expected by EME (and encoded in data: URI)
+            // Format compatible with dash.js 'serverURL' trick for clearkey
+            const serverResponse = {
+              keys: [
+                { kty: "oct", kid: kidB64url, k: keyB64url }
+              ]
+            };
+            const json = JSON.stringify(serverResponse);
+            const b64 = btoa(json).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); // base64url style
+            // Some players expect 'data:application/json;base64,...' with standard b64.
+            // We'll supply both styles but dash.js expects serverURL to return the JSON,
+            // so we provide a data: URI with base64 encoded JSON (standard b64).
+            const stdB64 = btoa(json);
+            const dataURI = 'data:application/json;base64,' + stdB64;
+
+            player.setProtectionData({
+              "org.w3.clearkey": {
+                // The "serverURL" here is a data: URI that contains a ClearKey JSON response.
+                serverURL: dataURI
+              }
+            });
+
+            setStatus('ClearKey configured (KID set).');
+          } catch (err) {
+            console.warn('Failed to configure ClearKey', err);
+            setStatus('Warning: ClearKey setup failed.');
+          }
         }
-        
-        function setLoading(isLoading) {
-            if (isLoading) {
-                loading.classList.add('active');
-            } else {
-                loading.classList.remove('active');
-            }
-        }
-        
-        function formatTime(seconds) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = Math.floor(seconds % 60);
-            
-            if (h > 0) {
-                return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            } else {
-                return `${m}:${s.toString().padStart(2, '0')}`;
-            }
-        }
-        
-        function updateTime() {
-            const currentTime = video.currentTime;
-            const duration = video.duration || 0;
-            time.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
-            
-            if (duration > 0) {
-                progress.style.width = `${(currentTime / duration) * 100}%`;
-            }
-        }
-        
-        async function initPlayer() {
+      } else {
+        setStatus('No ClearKey provided; attempting normal playback.');
+      }
+    }
+
+    // Populate quality / bitrate selection
+    function populateQuality(){
+      const qSel = document.getElementById('qualitySelect');
+      qSel.innerHTML = '';
+      const autoOpt = document.createElement('option');
+      autoOpt.textContent = 'Auto';
+      autoOpt.value = 'auto';
+      qSel.appendChild(autoOpt);
+
+      try {
+        const reps = player.getBitrateInfoListFor('video') || [];
+        // Collect unique heights or bandwidth labels
+        const seen = new Set();
+        reps.sort((a,b)=>b.height-a.height);
+        reps.forEach(function(r){
+          const label = r.height ? (r.height + 'p') : (Math.round(r.bitrate/1000)+' kbps');
+          if (!seen.has(label)) {
+            const opt = document.createElement('option');
+            opt.value = r.qualityIndex;
+            opt.textContent = label + ' — ' + Math.round(r.bitrate/1000) + ' kbps';
+            qSel.appendChild(opt);
+            seen.add(label);
+          }
+        });
+      } catch(e){
+        console.warn(e);
+      }
+
+      qSel.onchange = function(){
+        const v = qSel.value;
+        if (v === 'auto') {
+          player.setAutoSwitchQualityFor('video', true);
+          setStatus('Quality: Auto');
+        } else {
+          player.setAutoSwitchQualityFor('video', false);
+          // qualityIndex expects an integer index (0 = lowest)
+          const index = parseInt(v, 10);
+          if (!isNaN(index)) {
             try {
-                log('Installing Shaka Player polyfills...');
-                await shaka.polyfill.installAll();
-                
-                if (!shaka.Player.isBrowserSupported()) {
-                    throw new Error('Browser not supported');
-                }
-                
-                log('Initializing Shaka Player...');
-                player = new shaka.Player(video);
-                
-                // Configure player
-                player.configure({
-                    streaming: {
-                        lowLatencyMode: true,
-                        rebufferingGoal: 0.01,
-                        bufferingGoal: 0.1
-                    }
-                });
-                
-                // Set authentication headers
-                player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
-                        type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                        request.headers['authorization'] = authToken;
-                        request.headers['user-agent'] = userAgent;
-                    }
-                });
-                
-                // Event listeners
-                player.addEventListener('loading', () => {
-                    log('Loading stream...', 'info');
-                    setLoading(true);
-                });
-                
-                player.addEventListener('loaded', () => {
-                    log('Stream loaded successfully', 'success');
-                    setLoading(false);
-                });
-                
-                player.addEventListener('error', (e) => {
-                    const error = e.detail;
-                    log(`Error: ${error.code} - ${error.message || 'Unknown error'}`, 'error');
-                    setLoading(false);
-                });
-                
-                player.addEventListener('streaming', () => {
-                    log('Streaming started', 'success');
-                });
-                
-                // Load the stream
-                log(`Loading stream: ${streamUrl}`);
-                await player.load(streamUrl);
-                
-                // Update time periodically
-                setInterval(updateTime, 100);
-                
-            } catch (error) {
-                log(`Failed to initialize player: ${error.message}`, 'error');
-                setLoading(false);
-            }
+              player.setQualityFor('video', index);
+              setStatus('Quality: manual');
+            } catch(e){ console.warn(e); }
+          }
         }
-        
-        // Control event listeners
-        playPauseBtn.addEventListener('click', () => {
-            if (video.paused) {
-                video.play();
-                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-            } else {
-                video.pause();
-                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-            }
-        });
-        
-        muteBtn.addEventListener('click', () => {
-            video.muted = !video.muted;
-            if (video.muted) {
-                muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
-                volumeLevel.style.width = '0%';
-            } else {
-                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                volumeLevel.style.width = `${video.volume * 100}%`;
-            }
-        });
-        
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.querySelector('.player-container').requestFullscreen();
-                fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
-            } else {
-                document.exitFullscreen();
-                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-            }
-        });
-        
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            if (video.duration) {
-                video.currentTime = pos * video.duration;
-            }
-        });
-        
-        volumeSlider.addEventListener('click', (e) => {
-            const rect = volumeSlider.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            video.volume = pos;
-            volumeLevel.style.width = `${pos * 100}%`;
-            
-            if (pos === 0) {
-                muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
-            } else {
-                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-            }
-        });
-        
-        // Initialize player when page loads
-        document.addEventListener('DOMContentLoaded', initPlayer);
-    </script>
+      };
+    }
+
+    // Controls
+    document.getElementById('playBtn').addEventListener('click', function(){
+      video.play().catch(e=>console.warn(e));
+    });
+    document.getElementById('pauseBtn').addEventListener('click', function(){
+      video.pause();
+    });
+    document.getElementById('fsBtn').addEventListener('click', function(){
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.getElementById('videoContainer').requestFullscreen().catch(()=>{/*ignore*/});
+      }
+    });
+    document.getElementById('copyBtn').addEventListener('click', function(){
+      const url = document.getElementById('manifestInput').value.trim();
+      navigator.clipboard && navigator.clipboard.writeText(url).then(()=> {
+        const old = statusEl.textContent;
+        statusEl.textContent = 'Copied URL';
+        setTimeout(()=> statusEl.textContent = old, 1200);
+      }).catch(()=> {
+        setStatus('Copy failed');
+      });
+    });
+
+    document.getElementById('loadBtn').addEventListener('click', function(){
+      const m = document.getElementById('manifestInput').value.trim();
+      const lic = document.getElementById('licenseInput').value.trim();
+      setStatus('Loading manifest...');
+      createPlayer(m, lic);
+    });
+
+    // initialize with defaults
+    createPlayer(defaultManifest, defaultLicense);
+
+    // Auto populate quality after a small delay (dash may need a moment)
+    setTimeout(()=> populateQuality(), 1600);
+
+    // Expose player in console for debugging
+    window.dashPlayer = { playerInstance: () => player, videoElement: video };
+
+    // Accessibility & small UX touches
+    video.addEventListener('playing', ()=> setStatus('Playing'));
+    video.addEventListener('pause', ()=> setStatus('Paused'));
+    video.addEventListener('error', (e)=> {
+      console.error('Video element error', e);
+      setStatus('Playback error');
+    });
+  </script>
 </body>
 </html>
