@@ -1,337 +1,425 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Modern Stream Player (Shaka Engine v4.4.2) - PerfectTV</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>119 Ria C Live Stream</title>
     
-    <!-- Shaka Player UI compiled library and CSS - Version 4.4.2 from cdnjs -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.4.2/controls.min.css" crossorigin="anonymous">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.4.2/shaka-player.ui.min.js" crossorigin="anonymous"></script>
+    <!-- Shaka Player for DASH streaming -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.1.1/shaka-player.compiled.js"></script>
     
-    <!-- Mux.js for additional stream support -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mux.js/5.11.3/mux.min.js"></script>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
-        /* --- Core Styling --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #0f0f0f; /* YouTube's dark background */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
             color: #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 20px;
-            margin: 0;
         }
-
-        #container {
+        
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
             max-width: 900px;
             width: 100%;
-            margin-bottom: 20px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            margin-right: 15px;
+            background-color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #e50914;
+        }
+        
+        .title {
+            flex-grow: 1;
+        }
+        
+        .title h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .title p {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        .player-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            background-color: #000;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            background-color: #000;
-            position: relative; /* Added for watermark positioning */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
-
-        [data-shaka-player-container] {
-            width: 100%;
-            aspect-ratio: 16/9;
-        }
-
+        
         video {
             width: 100%;
-            height: 100%;
             display: block;
         }
-
-        /* --- Watermark Styling --- */
-        .watermark {
+        
+        .controls {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 28px;
-            font-weight: 500;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-            pointer-events: none;
-            z-index: 10;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
-
-        /* --- Debug Box Styling --- */
-        #debug-box {
-            width: 100%;
-            max-width: 900px;
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Roboto Mono', monospace;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        
+        .player-container:hover .controls {
+            opacity: 1;
+        }
+        
+        .btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            margin-right: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .progress-container {
+            flex-grow: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            margin: 0 15px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .progress {
+            height: 100%;
+            background: #e50914;
+            border-radius: 3px;
+            width: 0%;
+        }
+        
+        .time {
+            color: #fff;
             font-size: 14px;
-            max-height: 300px;
-            overflow-y: auto;
+            margin-right: 15px;
+            min-width: 100px;
         }
-        #debug-box h3 { margin-top: 0; color: #fff; }
-        .error { color: #ff4757; }
-        .success { color: #2ed573; }
-        .info { color: #74c0fc; }
-        .warning { color: #ffa502; }
-
-        /* --- YouTube-Style Shaka Player UI Overrides --- */
-        .shaka-video-container .shaka-bottom-controls,
-        .shaka-video-container .shaka-top-controls {
-            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-            backdrop-filter: blur(5px);
-            padding: 10px 20px;
+        
+        .volume-container {
+            display: flex;
+            align-items: center;
         }
-        .shaka-video-container .shaka-top-controls { background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
-
-        /* Buttons - YouTube-like icons and feel */
-        .shaka-video-container .shaka-play-button,
-        .shaka-video-container .shaka-mute-button,
-        .shaka-video-container .shaka-captions-button,
-        .shaka-video-container .shaka-overflow-menu-button,
-        .shaka-video-container .shaka-fullscreen-button,
-        .shaka-video-container .shaka-pip-button {
-            background: none !important;
-            color: #fff !important;
-            font-size: 24px !important;
-            padding: 5px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .shaka-video-container .shaka-play-button:hover,
-        .shaka-video-container .shaka-mute-button:hover,
-        .shaka-video-container .shaka-captions-button:hover,
-        .shaka-video-container .shaka-overflow-menu-button:hover,
-        .shaka-video-container .shaka-fullscreen-button:hover,
-        .shaka-video-container .shaka-pip-button:hover {
-            background: rgba(255, 255, 255, 0.1) !important;
-        }
-
-        /* Seek Bar - YouTube's red progress bar */
-        .shaka-video-container .shaka-seek-bar {
+        
+        .volume-slider {
+            width: 80px;
             height: 4px;
             background: rgba(255, 255, 255, 0.3);
             border-radius: 2px;
+            margin-left: 10px;
+            cursor: pointer;
+            position: relative;
         }
-        .shaka-video-container .shaka-seek-bar .shaka-played-range,
-        .shaka-video-container .shaka-seek-bar .shaka-ad-breaks {
-            background: #ff0000; /* YouTube Red */
+        
+        .volume-level {
+            height: 100%;
+            background: #e50914;
+            border-radius: 2px;
+            width: 100%;
         }
-        .shaka-video-container .shaka-seek-bar .shaka-buffered-range {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        .shaka-video-container .shaka-seek-bar-container:hover .shaka-seek-bar {
-            height: 6px;
-        }
-        .shaka-video-container .shaka-seek-bar .shaka-thumb {
-            background: #ff0000;
-            border: 2px solid #fff;
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .shaka-video-container .shaka-seek-bar-container:hover .shaka-thumb {
-            opacity: 1;
-        }
-
-        /* Volume Bar */
-        .shaka-video-container .shaka-volume-bar {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        .shaka-video-container .shaka-volume-bar .shaka-played-range {
-            background: #ff0000;
-        }
-
-        /* Overflow Menu */
-        .shaka-video-container .shaka-overflow-menu {
-            background: rgba(28, 28, 28, 0.95);
-            border-radius: 8px;
-            border: none;
-            backdrop-filter: blur(10px);
-        }
-        .shaka-video-container .shaka-overflow-menu li {
-            color: #fff;
-            transition: background 0.2s;
-            padding: 10px 15px;
-        }
-        .shaka-video-container .shaka-overflow-menu li:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .shaka-video-container .shaka-overflow-menu li[aria-checked="true"] {
-            color: #ff0000;
-        }
-
-        /* Time & Duration Display */
-        .shaka-video-container .shaka-time-and-duration {
-            color: #fff;
-            font-size: 13px;
-            text-shadow: 0 0 2px rgba(0,0,0,0.5);
-        }
-
-        /* Hide the big center play button to match YouTube's minimal look */
-        .shaka-video-container .shaka-play-button-container {
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             display: none;
         }
-
-        /* Channel Selection Styling */
-        .channel-selector {
-            width: 100%;
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #e50914;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .status {
+            margin-top: 20px;
             max-width: 900px;
-            margin-bottom: 20px;
+            width: 100%;
             background-color: #1a1a1a;
-            border: 1px solid #333;
-            padding: 15px;
             border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 14px;
         }
         
-        .channel-selector select, .channel-selector button {
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #333;
-            background-color: #2a2a2a;
-            color: #fff;
-            font-size: 16px;
+        .error {
+            color: #ff4757;
         }
         
-        .channel-selector button {
-            background-color: #ff0000;
-            cursor: pointer;
-            transition: background-color 0.2s;
+        .success {
+            color: #2ed573;
         }
         
-        .channel-selector button:hover {
-            background-color: #cc0000;
+        .info {
+            color: #74b9ff;
         }
     </style>
 </head>
 <body>
-    <div class="channel-selector">
-        <h3>Channel Selection</h3>
-        <select id="channel-select">
-            <option value="riahd">RIA HD</option>
-            <!-- Add more channels here as needed -->
-        </select>
-        <button id="load-channel">Load Channel</button>
-    </div>
-
-    <div id="container">
-        <div data-shaka-player-container>
-            <video autoplay data-shaka-player id="video" style="width: 100%; height: 100%;" poster=""></video>
+    <div class="header">
+        <div class="logo">RIA</div>
+        <div class="title">
+            <h1>119 Ria C</h1>
+            <p>MALAYSIA • Live Entertainment Channel</p>
         </div>
-        <div class="watermark">PROSTREAM- PerfectTV</div>
     </div>
-
-    <div id="debug-box">
-        <h3>Debug Information</h3>
-        <div id="debug-content">Initializing player...</div>
+    
+    <div class="player-container">
+        <video id="video" autoplay muted></video>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+        </div>
+        <div class="controls">
+            <button class="btn" id="play-pause">
+                <i class="fas fa-pause"></i>
+            </button>
+            <div class="progress-container" id="progress-container">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div class="time" id="time">00:00 / 00:00</div>
+            <div class="volume-container">
+                <button class="btn" id="mute">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <div class="volume-slider" id="volume-slider">
+                    <div class="volume-level" id="volume-level"></div>
+                </div>
+            </div>
+            <button class="btn" id="fullscreen">
+                <i class="fas fa-expand"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="status" id="status">
+        <div class="info">Initializing player...</div>
     </div>
 
     <script>
-        const debugContent = document.getElementById('debug-content');
-        const channelSelect = document.getElementById('channel-select');
-        const loadChannelButton = document.getElementById('load-channel');
-
+        const video = document.getElementById('video');
+        const playPauseBtn = document.getElementById('play-pause');
+        const muteBtn = document.getElementById('mute');
+        const fullscreenBtn = document.getElementById('fullscreen');
+        const progressContainer = document.getElementById('progress-container');
+        const progress = document.getElementById('progress');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeLevel = document.getElementById('volume-level');
+        const time = document.getElementById('time');
+        const loading = document.getElementById('loading');
+        const status = document.getElementById('status');
+        
+        // Stream configuration
+        const streamUrl = 'https://load.perfecttv.net/mpd/ria/manifest.mpd?username=vip_r92bmh1k&password=yb3IpqrB&channel=riafhd';
+        const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM4MjgwOTUsImlzcyI6IlZSIiwiZXhwIjoxNzYzODU2ODk1LCJ3bXZlciI6Mywid21pZGZtdCI6ImFzY2lpIiwid21pZHR5cCI6MSwid21rZXl2ZXIiOjMsIndtdG1pZHZlciI6NCwid21pZGxlbiI6NTEyLCJ3bW9waWQiOjMyLCJ3bWlkIjoiMWUxMGI5MDctMzVlOS00YjM2LTlkYWEtODBiNjBlYzViZmYyIiwiZmlsdGVyIjoiKHR5cGU9PVwidmlkZW9cIiYmRGlzcGxheUhlaWdodDw9NzIwKXx8KHR5cGU9PVwiYXVkaW9cIiYmZm91ckNDIT1cImFjLTNcIil8fCh0eXBlIT1cInZpZGVvXCImJnR5cGUhPVwiYXVkaW9cIikiLCJwYXR0ZXJuIjoiMTAwNCJ9.yalrS7Sl11Ussno81wF4vvHBt_KR6M5DBcncyhlRYyw';
+        const userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+        
+        let player;
+        let isPlaying = true;
+        
         function log(message, type = 'info') {
-            debugContent.innerHTML += `<span class="${type}">[${new Date().toLocaleTimeString()}] ${message}</span>\n`;
-            debugContent.scrollTop = debugContent.scrollHeight;
+            status.innerHTML += `<div class="${type}">${new Date().toLocaleTimeString()}: ${message}</div>`;
+            status.scrollTop = status.scrollHeight;
             console.log(message);
         }
-
-        // Function to create a custom networking engine to add headers
-        function createNetworkingEngine() {
-            const factory = function(request) {
-                // Add custom headers to all requests
-                request.headers['X-PTV-App'] = 'Mozilla 5.0 Apple Web';
-                request.headers['X-PTV-Device'] = 'e5fc737d1f54b844';
-                request.headers['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
-                
-                // Return a Promise that resolves with the response
-                return shaka.net.HttpRequestPlugin.defaultRequestFactory(request);
-            };
-            
-            shaka.net.NetworkingEngine.registerRequestFilter(function(type, request) {
-                // Add headers to segment requests
-                if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                    request.headers['X-PTV-App'] = 'Mozilla 5.0 Apple Web';
-                    request.headers['X-PTV-Device'] = 'e5fc737d1f54b844';
-                    request.headers['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
-                }
-            });
-        }
-
-        async function initPlayer(channel) {
-            const video = document.getElementById('video');
-            const ui = video['ui'];
-            const controls = ui.getControls();
-            const player = controls.getPlayer();
-
-            // Configure networking engine with custom headers
-            createNetworkingEngine();
-
-            // Configure player
-            player.configure({
-                streaming: {
-                    lowLatencyMode: true,
-                    rebufferingGoal: 0.01,
-                    bufferingGoal: 10,
-                    retryParameters: {
-                        maxAttempts: 5,
-                        baseDelay: 1000,
-                        backoffFactor: 2,
-                        fuzzFactor: 0.5,
-                        timeout: 30000
-                    }
-                }
-            });
-
-            player.addEventListener('error', (errorEvent) => {
-                log(`Player error: ${errorEvent.detail.code} - ${errorEvent.detail.message}`, 'error');
-            });
-
-            try {
-                // Build the URL with channel parameter
-                const perfectTvUrl = `https://load.perfecttv.net/mpd/ria/manifest.mpd?username=vip_3klp0es8&password=wg3piwEs&channel=${channel}`;
-                
-                log('Loading PerfectTV channel: ' + channel, 'info');
-                await player.load(perfectTvUrl);
-                log('✅ PerfectTV channel has been loaded!', 'success');
-            } catch (error) {
-                log(`Error while loading PerfectTV channel: ${error.message}`, 'error');
-            }
-        }
-
-        // Initialize with default channel
-        document.addEventListener('shaka-ui-loaded', () => {
-            initPlayer(channelSelect.value);
-        });
-
-        // Handle channel change
-        loadChannelButton.addEventListener('click', () => {
-            initPlayer(channelSelect.value);
-        });
-
-        document.addEventListener('shaka-ui-load-failed', () => {
-            log('Unable to load the Shaka Player UI library!', 'error');
-        });
-
-        // Check if Shaka Player is supported
-        document.addEventListener('DOMContentLoaded', () => {
-            if (shaka.Player.isBrowserSupported()) {
-                log('Browser is supported. Initializing Shaka Player...', 'info');
+        
+        function setLoading(isLoading) {
+            if (isLoading) {
+                loading.classList.add('active');
             } else {
-                log("Shaka Player is not supported in this browser.", 'error');
+                loading.classList.remove('active');
+            }
+        }
+        
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            
+            if (h > 0) {
+                return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            } else {
+                return `${m}:${s.toString().padStart(2, '0')}`;
+            }
+        }
+        
+        function updateTime() {
+            const currentTime = video.currentTime;
+            const duration = video.duration || 0;
+            time.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+            
+            if (duration > 0) {
+                progress.style.width = `${(currentTime / duration) * 100}%`;
+            }
+        }
+        
+        async function initPlayer() {
+            try {
+                log('Installing Shaka Player polyfills...');
+                await shaka.polyfill.installAll();
+                
+                if (!shaka.Player.isBrowserSupported()) {
+                    throw new Error('Browser not supported');
+                }
+                
+                log('Initializing Shaka Player...');
+                player = new shaka.Player(video);
+                
+                // Configure player
+                player.configure({
+                    streaming: {
+                        lowLatencyMode: true,
+                        rebufferingGoal: 0.01,
+                        bufferingGoal: 0.1
+                    }
+                });
+                
+                // Set authentication headers
+                player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
+                        type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        request.headers['authorization'] = authToken;
+                        request.headers['user-agent'] = userAgent;
+                    }
+                });
+                
+                // Event listeners
+                player.addEventListener('loading', () => {
+                    log('Loading stream...', 'info');
+                    setLoading(true);
+                });
+                
+                player.addEventListener('loaded', () => {
+                    log('Stream loaded successfully', 'success');
+                    setLoading(false);
+                });
+                
+                player.addEventListener('error', (e) => {
+                    const error = e.detail;
+                    log(`Error: ${error.code} - ${error.message || 'Unknown error'}`, 'error');
+                    setLoading(false);
+                });
+                
+                player.addEventListener('streaming', () => {
+                    log('Streaming started', 'success');
+                });
+                
+                // Load the stream
+                log(`Loading stream: ${streamUrl}`);
+                await player.load(streamUrl);
+                
+                // Update time periodically
+                setInterval(updateTime, 100);
+                
+            } catch (error) {
+                log(`Failed to initialize player: ${error.message}`, 'error');
+                setLoading(false);
+            }
+        }
+        
+        // Control event listeners
+        playPauseBtn.addEventListener('click', () => {
+            if (video.paused) {
+                video.play();
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                video.pause();
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
             }
         });
+        
+        muteBtn.addEventListener('click', () => {
+            video.muted = !video.muted;
+            if (video.muted) {
+                muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                volumeLevel.style.width = '0%';
+            } else {
+                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                volumeLevel.style.width = `${video.volume * 100}%`;
+            }
+        });
+        
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.querySelector('.player-container').requestFullscreen();
+                fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+            } else {
+                document.exitFullscreen();
+                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+            }
+        });
+        
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            if (video.duration) {
+                video.currentTime = pos * video.duration;
+            }
+        });
+        
+        volumeSlider.addEventListener('click', (e) => {
+            const rect = volumeSlider.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            video.volume = pos;
+            volumeLevel.style.width = `${pos * 100}%`;
+            
+            if (pos === 0) {
+                muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            } else {
+                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            }
+        });
+        
+        // Initialize player when page loads
+        document.addEventListener('DOMContentLoaded', initPlayer);
     </script>
 </body>
 </html>
