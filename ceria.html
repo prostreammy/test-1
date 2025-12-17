@@ -1,116 +1,52 @@
-<!-- File: ceria-player.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CERIA TV Player</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
+    <title>Astro Ceria - Live</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.0/dist/controls.css">
+    <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.0/dist/shaka-player.ui.js"></script>
     <style>
-        /* Full-screen layout for TV and Mobile */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #000;
-            overflow: hidden;
-        }
-        .video-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        .shaka-controls-button-panel { font-size: 24px; }
-        .shaka-controls-button-panel > button { padding: 12px; margin: 0 8px; }
-        .shaka-bottom-controls { background: linear-gradient(transparent, rgba(0, 0, 0, 0.7)); padding-bottom: 2em; }
-        .shaka-overflow-menu { font-size: 18px; }
-        .shaka-seek-bar-container { display: none !important; }
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .video-container { width: 100%; max-width: 900px; aspect-ratio: 16/9; }
+        video { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
-    <div class="video-container">
-        <div data-shaka-player-container>
-            <video id="video" data-shaka-player autoplay></video>
-        </div>
-    </div>
 
-    <script>
-        const PROXY_PATH = '/api/ceria-proxy';
-        let player;
+<div class="video-container" id="video-parent">
+    <video id="video" autoplay muted></video>
+</div>
 
-        async function initApp() {
-            shaka.polyfill.installAll();
-            if (!shaka.Player.isBrowserSupported()) {
-                document.querySelector('.video-container').innerHTML = `<div style="color:white;text-align:center;"><h2>Browser Not Supported</h2></div>`;
-                return;
-            }
+<script>
+    async function initApp() {
+        // Install built-in polyfills to patch browser incompatibilities
+        shaka.polyfill.installAll();
 
-            const video = document.getElementById('video');
-            player = new shaka.Player(video);
-            const ui = new shaka.ui.Overlay(player, video.parentElement, video);
+        const video = document.getElementById('video');
+        const player = new shaka.Player(video);
 
-            ui.configure({
-                controlPanelElements: ['play_pause', 'overflow_menu', 'fullscreen'],
-                addBigPlayButton: true,
-                overflowMenuButtons: ['quality', 'language']
-            });
-            
-            // NEW: Configure DRM
-            player.configure({
-                drm: {
-                    // Tell Shaka Player to use our proxy for Widevine license requests
-                    servers: {
-                        'com.widevine.alpha': `${PROXY_PATH}?type=license`
-                    },
-                    // Some license servers require this
-                    advanced: {
-                        'com.widevine.alpha': {
-                            videoRobustness: 'SW_SECURE_CRYPTO',
-                            audioRobustness: 'SW_SECURE_CRYPTO'
-                        }
-                    }
-                },
-                manifest: {
-                    // This helps with some DASH streams
-                    dash: { autoCorrectDrift: true }
+        // Configure DRM (Widevine)
+        player.configure({
+            drm: {
+                servers: {
+                    'com.widevine.alpha': 'https://widevine-proxy.astro.com.my/proxy' // Common Astro License Server
                 }
-            });
-
-            // Network Filter: Rewrite ALL requests to go through our proxy
-            player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                const proxyUrl = new URL(PROXY_PATH, window.location.origin);
-
-                if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
-                    request.uris = [`${proxyUrl.href}?type=manifest`];
-                } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT ||
-                           type === shaka.net.NetworkingEngine.RequestType.INIT_SEGMENT) {
-                    // The URI is the full path from the BaseURL in the manifest
-                    const uri = request.uris[0];
-                    const fileName = uri.substring(uri.lastIndexOf('/') + 1);
-                    request.uris = [`${proxyUrl.href}?type=segment&segment=${encodeURIComponent(fileName)}`];
-                }
-                // License requests are handled automatically by the 'drm.servers' config
-            });
-
-            try {
-                await player.load(`${PROXY_PATH}?type=manifest`, null, 'application/dash+xml');
-                console.log('CERIA stream loaded!');
-            } catch (error) {
-                console.error('Error loading stream:', error);
-                document.querySelector('.video-container').innerHTML = `<div style="color:white;text-align:center;"><h2>Stream Error</h2><p>${error.code} - ${error.message}</p></div>`;
             }
+        });
+
+        // Use your Vercel Proxy URL
+        const manifestUri = '/api/ceria-proxy';
+
+        try {
+            await player.load(manifestUri);
+            console.log('The video has now been loaded!');
+        } catch (e) {
+            console.error('Error code', e.code, 'object', e);
         }
+    }
 
-        document.addEventListener('DOMContentLoaded', initApp);
-    </script>
+    document.addEventListener('DOMContentLoaded', initApp);
+</script>
 </body>
 </html>
