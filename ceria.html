@@ -1,52 +1,94 @@
+<!-- File: ceria-player.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro Ceria - Live</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.0/dist/controls.css">
-    <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.0/dist/shaka-player.ui.js"></script>
+    <title>CERIA TV Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <style>
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .video-container { width: 100%; max-width: 900px; aspect-ratio: 16/9; }
-        video { width: 100%; height: 100%; }
+        html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; background-color: #000; overflow: hidden; }
+        .video-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        .shaka-controls-button-panel { font-size: 24px; }
+        .shaka-controls-button-panel > button { padding: 12px; margin: 0 8px; }
+        .shaka-bottom-controls { background: linear-gradient(transparent, rgba(0, 0, 0, 0.7)); padding-bottom: 2em; }
+        .shaka-overflow-menu { font-size: 18px; }
+        .shaka-seek-bar-container { display: none !important; }
     </style>
 </head>
 <body>
+    <div class="video-container">
+        <div data-shaka-player-container>
+            <video id="video" data-shaka-player autoplay></video>
+        </div>
+    </div>
 
-<div class="video-container" id="video-parent">
-    <video id="video" autoplay muted></video>
-</div>
+    <script>
+        const PROXY_PATH = '/api/ceria-proxy';
+        let player;
 
-<script>
-    async function initApp() {
-        // Install built-in polyfills to patch browser incompatibilities
-        shaka.polyfill.installAll();
-
-        const video = document.getElementById('video');
-        const player = new shaka.Player(video);
-
-        // Configure DRM (Widevine)
-        player.configure({
-            drm: {
-                servers: {
-                    'com.widevine.alpha': 'https://widevine-proxy.astro.com.my/proxy' // Common Astro License Server
-                }
+        async function initApp() {
+            shaka.polyfill.installAll();
+            if (!shaka.Player.isBrowserSupported()) {
+                document.querySelector('.video-container').innerHTML = `<div style="color:white;text-align:center;"><h2>Browser Not Supported</h2></div>`;
+                return;
             }
-        });
 
-        // Use your Vercel Proxy URL
-        const manifestUri = '/api/ceria-proxy';
+            const video = document.getElementById('video');
+            player = new shaka.Player(video);
+            const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
-        try {
-            await player.load(manifestUri);
-            console.log('The video has now been loaded!');
-        } catch (e) {
-            console.error('Error code', e.code, 'object', e);
+            ui.configure({
+                controlPanelElements: ['play_pause', 'overflow_menu', 'fullscreen'],
+                addBigPlayButton: true,
+                overflowMenuButtons: ['quality', 'language']
+            });
+            
+            // Configure DRM
+            player.configure({
+                drm: {
+                    // Tell Shaka Player to use our proxy for Widevine license requests
+                    servers: {
+                        'com.widevine.alpha': `${PROXY_PATH}?type=license`
+                    },
+                    advanced: {
+                        'com.widevine.alpha': {
+                            videoRobustness: 'SW_SECURE_CRYPTO',
+                            audioRobustness: 'SW_SECURE_CRYPTO'
+                        }
+                    }
+                }
+            });
+
+            // Network Filter: Rewrite ALL requests to go through our proxy
+            player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                    // For the manifest, just point to the proxy without any params
+                    request.uris = [PROXY_PATH];
+                } else if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
+                    // License requests are handled by the drm.servers config, but we need to ensure they are POST
+                    // The filter can be used to modify the request if needed, but the config is primary.
+                    // No action needed here if drm.servers is set correctly.
+                } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT ||
+                           type === shaka.net.NetworkingEngine.RequestType.INIT_SEGMENT) {
+                    // For segments, pass the FULL original URL to the proxy
+                    const originalUri = request.uris[0];
+                    request.uris = [`${PROXY_PATH}?url=${encodeURIComponent(originalUri)}`];
+                }
+            });
+
+            try {
+                await player.load(PROXY_PATH, null, 'application/dash+xml');
+                console.log('CERIA stream loaded!');
+            } catch (error) {
+                console.error('Error loading stream:', error);
+                document.querySelector('.video-container').innerHTML = `<div style="color:white;text-align:center;"><h2>Stream Error</h2><p>${error.code} - ${error.message}</p></div>`;
+            }
         }
-    }
 
-    document.addEventListener('DOMContentLoaded', initApp);
-</script>
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
