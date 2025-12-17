@@ -72,7 +72,7 @@
     </div>
 
     <script>
-        // UPDATED: Path for the CITRA stream proxy
+        // Path for the CITRA stream proxy
         const PROXY_PATH = '/api/citra-proxy';
 
         let player;
@@ -95,10 +95,10 @@
                         'fullscreen'
                     ],
                     addBigPlayButton: true,
+                    // FIX: Removed 'caption' to prevent the UI error
                     overflowMenuButtons: [
                         'quality',
-                        'language',
-                        'caption'
+                        'language'
                     ]
                 });
 
@@ -134,10 +134,25 @@
                     console.log('CITRA stream loaded successfully!');
                 } catch (error) {
                     console.error('Error loading stream:', error);
+
+                    // IMPROVEMENT: Provide a more detailed error message
+                    let errorMessage = 'An unknown error occurred.';
+                    if (error instanceof shaka.util.Error) {
+                        if (error.code === shaka.util.Error.Code.BAD_HTTP_STATUS) {
+                            // This is the error you are seeing
+                            const httpStatus = error.data[1] || 'Unknown';
+                            errorMessage = `The stream server returned an error (HTTP ${httpStatus}). This usually means the URL, credentials, or User-Agent is incorrect.`;
+                        } else {
+                            errorMessage = `Shaka Player Error: ${error.message} (Code: ${error.code})`;
+                        }
+                    } else {
+                        errorMessage = `Error: ${error.message}`;
+                    }
+
                     document.querySelector('.video-container').innerHTML = `
                         <div style="color: white; text-align: center;">
                             <h2>Error Loading Stream</h2>
-                            <p>${error.message}</p>
+                            <p>${errorMessage}</p>
                         </div>
                     `;
                 }
