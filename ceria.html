@@ -1,111 +1,42 @@
-<!-- File: ceria-player.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CERIA TV Player</title>
+    <title>CERIA Player</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <style>
-        /* Full-screen layout for TV and Mobile */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #000;
-            overflow: hidden; /* Prevents scrollbars */
-        }
-
-        /* Container to center the video */
-        .video-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Video element to fill the container while maintaining aspect ratio */
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* Ensures the video is not stretched or cropped */
-        }
-        
-        /* --- Shaka Player UI Customizations for TV/Mobile --- */
-
-        /* Make the control bar larger and more accessible */
-        .shaka-controls-button-panel {
-            font-size: 24px; /* Larger icons */
-        }
-        
-        /* Increase the size of each button for better touch/remote targets */
-        .shaka-controls-button-panel > button {
-            padding: 12px;
-            margin: 0 8px;
-        }
-
-        /* Style the bottom controls bar for better visibility */
-        .shaka-bottom-controls {
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
-            padding-bottom: 2em; /* Add space from the edge of the screen */
-        }
-
-        /* Ensure the overflow menu is also styled consistently */
-        .shaka-overflow-menu {
-            font-size: 18px;
-        }
-
-        /* As a fallback, hide any element that might be a seek bar */
-        .shaka-seek-bar-container {
-            display: none !important;
-        }
+        body { margin: 0; background: #000; width: 100vw; height: 100vh; overflow: hidden; }
+        .video-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        /* Hide seek bar for Live TV */
+        .shaka-seek-bar-container { display: none !important; }
     </style>
 </head>
 <body>
-    <!-- Updated HTML structure to match other players -->
-    <div class="video-container">
-        <div data-shaka-player-container>
-            <video id="video" data-shaka-player autoplay></video>
-        </div>
+    <div class="video-container" data-shaka-player-container>
+        <video id="video" data-shaka-player autoplay></video>
     </div>
 
     <script>
-        // UPDATED: Path for the CERIA stream proxy
         const PROXY_PATH = '/api/ceria-proxy';
-        let player;
 
-        async function initApp() {
+        async function initCeria() {
             shaka.polyfill.installAll();
-            if (!shaka.Player.isBrowserSupported()) {
-                document.querySelector('.video-container').innerHTML = `
-                    <div style="color: white; text-align: center;">
-                        <h2>Error</h2>
-                        <p>This browser is not supported for streaming.</p>
-                    </div>
-                `;
-                return;
-            }
+            if (!shaka.Player.isBrowserSupported()) return;
 
             const video = document.getElementById('video');
-            player = new shaka.Player(video);
+            const player = new shaka.Player(video);
             const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
-            // UI configuration to match other players
             ui.configure({
-                controlPanelElements: ['play_pause', 'overflow_menu', 'fullscreen'],
-                addBigPlayButton: true,
-                overflowMenuButtons: ['quality', 'language']
+                controlPanelElements: ['play_pause', 'overflow_menu', 'fullscreen']
             });
 
-            // Network Filter: Rewrite segment URLs correctly
+            // Segment Rewriting Logic
             player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
-                    request.uris = [PROXY_PATH];
-                } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                    // Extract filename and strip any existing query params from the source
+                if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
                     const url = new URL(request.uris[0]);
                     const fileName = url.pathname.split('/').pop();
                     request.uris = [`${PROXY_PATH}?segment=${encodeURIComponent(fileName)}`];
@@ -113,16 +44,15 @@
             });
 
             try {
-                // Preserving the fix for Error 4000
+                // Force DASH parsing to avoid Error 4000
                 await player.load(PROXY_PATH, null, 'application/dash+xml');
-                console.log('CERIA stream loaded!');
-            } catch (error) {
-                console.error('Error:', error);
-                document.querySelector('.video-container').innerHTML = `<div style="color:white;text-align:center;"><h2>Stream Error</h2><p>${error.code} - ${error.message}</p></div>`;
+                console.log('Ceria Loaded');
+            } catch (e) {
+                console.error('Load Error', e);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', initApp);
+        document.addEventListener('DOMContentLoaded', initCeria);
     </script>
 </body>
 </html>
