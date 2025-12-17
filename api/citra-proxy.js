@@ -6,7 +6,7 @@ export const config = {
 
 export default async function handler(req) {
   const BASE_URL = "https://get.perfecttv.net/citra/";
-  const MANIFEST_URL = "https://get.perfecttv.net/citra/citra.mpd?username=vip_r92bmh1k&password=yb3IpqrB&channel=astrocitra";
+  const MANIFEST_URL = "https://get.perfecttv.net/citra/citra.mpd?username=vip_r32114fqwek&password=yb34311wrB&channel=astrocitra";
 
   const { searchParams } = new URL(req.url);
   const segmentName = searchParams.get('segment');
