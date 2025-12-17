@@ -6,7 +6,7 @@ export const config = {
 
 export default async function handler(req) {
   const BASE_URL = "https://load.perfecttv.net/mpd/prima/";
-  const MANIFEST_URL = "https://load.perfecttv.net/mpd/prima/manifest.mpd?username=vip_r92bmh1k&password=yb3IpqrB&channel=primafhd";
+  const MANIFEST_URL = "https://load.perfecttv.net/mpd/prima/manifest.mpd?username=vip_r92313h1k&password=ybweqweqrB&channel=primafhd";
 
   const { searchParams } = new URL(req.url);
   const segmentName = searchParams.get('segment');
