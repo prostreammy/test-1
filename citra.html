@@ -1,3 +1,4 @@
+<!-- File: citra-player.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,17 +8,68 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <style>
-        html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; background-color: #000; overflow: hidden; }
-        .video-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        video { width: 100%; height: 100%; object-fit: contain; }
-        .shaka-controls-button-panel { font-size: 24px; }
-        .shaka-bottom-controls { background: linear-gradient(transparent, rgba(0, 0, 0, 0.7)); padding-bottom: 2em; }
-        .shaka-seek-bar-container { display: none !important; }
+        /* Full-screen layout for TV and Mobile */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            overflow: hidden; /* Prevents scrollbars */
+        }
+
+        /* Container to center the video */
+        .video-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Video element to fill the container while maintaining aspect ratio */
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensures the video is not stretched or cropped */
+        }
+        
+        /* --- Shaka Player UI Customizations for TV/Mobile --- */
+
+        /* Make the control bar larger and more accessible */
+        .shaka-controls-button-panel {
+            font-size: 24px; /* Larger icons */
+        }
+        
+        /* Increase the size of each button for better touch/remote targets */
+        .shaka-controls-button-panel > button {
+            padding: 12px;
+            margin: 0 8px;
+        }
+
+        /* Style the bottom controls bar for better visibility */
+        .shaka-bottom-controls {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            padding-bottom: 2em; /* Add space from the edge of the screen */
+        }
+
+        /* Ensure the overflow menu is also styled consistently */
+        .shaka-overflow-menu {
+            font-size: 18px;
+        }
+
+        /* As a fallback, hide any element that might be a seek bar */
+        .shaka-seek-bar-container {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
-    <div class="video-container" data-shaka-player-container>
-        <video id="video" data-shaka-player autoplay></video>
+    <!-- Updated HTML structure to match ria-player.html -->
+    <div class="video-container">
+        <div data-shaka-player-container>
+            <video id="video" data-shaka-player autoplay></video>
+        </div>
     </div>
 
     <script>
@@ -26,14 +78,25 @@
 
         async function initApp() {
             shaka.polyfill.installAll();
-            if (!shaka.Player.isBrowserSupported()) return;
+            if (!shaka.Player.isBrowserSupported()) {
+                // More user-friendly error message
+                document.querySelector('.video-container').innerHTML = `
+                    <div style="color: white; text-align: center;">
+                        <h2>Error</h2>
+                        <p>This browser is not supported for streaming.</p>
+                    </div>
+                `;
+                return;
+            }
 
             const video = document.getElementById('video');
             player = new shaka.Player(video);
             const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
+            // Updated UI configuration to match ria-player.html
             ui.configure({
                 controlPanelElements: ['play_pause', 'overflow_menu', 'fullscreen'],
+                addBigPlayButton: true, // Added this line
                 overflowMenuButtons: ['quality', 'language']
             });
 
@@ -50,12 +113,12 @@
             });
 
             try {
-                // FIX: Added 'application/dash+xml' as the 3rd argument to stop Error 4000
+                // Preserving your fix for Error 4000
                 await player.load(PROXY_PATH, null, 'application/dash+xml');
                 console.log('CITRA stream loaded!');
             } catch (error) {
                 console.error('Error:', error);
-                document.body.innerHTML = `<div style="color:white;text-align:center;padding-top:20%;"><h2>Stream Error</h2><p>${error.code}</p></div>`;
+                document.querySelector('.video-container').innerHTML = `<div style="color:white;text-align:center;"><h2>Stream Error</h2><p>${error.code} - ${error.message}</p></div>`;
             }
         }
 
