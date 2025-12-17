@@ -21,28 +21,25 @@ export default async function handler(req) {
 
   try {
     if (isLicenseRequest) {
-      // License requests are POST requests with a specific body and headers
       targetUrl = LICENSE_URL;
       options.method = 'POST';
       
-      // Copy the essential headers from the player's request
+      // FIX: Forward ALL headers from the player's request to the license server
       const playerHeaders = Object.fromEntries(req.headers.entries());
-      options.headers = {
-        'Content-Type': playerHeaders['content-type'],
-        // Add any other headers the license server might need
-      };
+      options.headers = playerHeaders;
 
       // Copy the body from the player's request
       options.body = req.body;
     } else if (segmentUrl) {
-      // The player provides the full segment URL
       targetUrl = decodeURIComponent(segmentUrl);
     } else {
-      // Default to manifest request
       targetUrl = MANIFEST_URL;
     }
     
     console.log(`[PROXY] Fetching: ${targetUrl}`);
+    if (isLicenseRequest) {
+        console.log(`[PROXY] License request headers:`, options.headers);
+    }
 
     const response = await fetch(targetUrl, options);
 
@@ -59,7 +56,6 @@ export default async function handler(req) {
       'Content-Type': response.headers.get('content-type') || 'application/octet-stream',
     };
 
-    // For licenses, the content type is crucial
     if (isLicenseRequest) {
         responseHeaders['Content-Type'] = 'application/octet-stream';
     }
