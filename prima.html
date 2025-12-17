@@ -1,490 +1,159 @@
+<!-- File: prima-player.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>PROSTREAM-ASTRO-PRIMA(VIP)</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Google Fonts for a professional watermark font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
-
-    <!-- Shaka Player UI compiled library -->
-    <script src="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/shaka-player.ui.js"></script>
-    <!-- Shaka Player UI compiled library default CSS -->
-    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/shaka-player/4.11.9/controls.css">
-    <!-- Chromecast SDK -->
-    <script defer src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRIMA TV Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <style>
+        /* Full-screen layout for TV and Mobile */
         html, body {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             background-color: #000;
-            overflow: hidden;
+            overflow: hidden; /* Prevents scrollbars */
         }
 
-        [data-shaka-player-container] {
-            position: absolute;
-            top: 0;
-            left: 0;
+        /* Container to center the video */
+        .video-container {
             width: 100%;
             height: 100%;
-        }
-
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        #watermark {
-            position: absolute;
-            top: 2vw;
-            left: 2vw;
-            z-index: 9999;
-            font-family: 'Roboto', sans-serif;
-            font-size: 3.5vw;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.6);
-            pointer-events: none;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
-            letter-spacing: 2px;
-        }
-
-        [data-shaka-player-container] *:focus {
-            outline: 2px solid #ffcc00 !important;
-            background-color: rgba(255, 204, 0, 0.2) !important;
-        }
-        
-        [data-shaka-player-container] button {
-             -webkit-appearance: none;
-        }
-
-        /* Loading overlay styles */
-        #loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-            color: white;
-            transition: opacity 0.7s ease;
         }
 
-        #loading-overlay.fade-out {
-            opacity: 0;
+        /* Video element to fill the container while maintaining aspect ratio */
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensures the video is not stretched or cropped */
+        }
+        
+        /* --- Shaka Player UI Customizations for TV/Mobile --- */
+
+        /* Make the control bar larger and more accessible */
+        .shaka-controls-button-panel {
+            font-size: 24px; /* Larger icons */
+        }
+        
+        /* Increase the size of each button for better touch/remote targets */
+        .shaka-controls-button-panel > button {
+            padding: 12px;
+            margin: 0 8px;
         }
 
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 20px;
+        /* Style the bottom controls bar for better visibility */
+        .shaka-bottom-controls {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            padding-bottom: 2em; /* Add space from the edge of the screen */
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        /* Ensure the overflow menu is also styled consistently */
+        .shaka-overflow-menu {
+            font-size: 18px;
         }
 
-        #loading-text {
-            font-family: 'Roboto', sans-serif;
-            font-size: 1.2rem;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        #retry-button {
-            background-color: #ffcc00;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-family: 'Roboto', sans-serif;
-            font-weight: bold;
-            cursor: pointer;
-            display: none;
-        }
-
-        #retry-button:hover {
-            background-color: #ff9900;
-        }
-
-        /* 
-         * --- Caption Styling ---
-        */
-        [data-shaka-player-container] .shaka-text-container {
-            position: absolute !important;
-            top: 85% !important;
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            width: 70% !important;
-            text-align: center !important;
-            padding: 0 !important;
-            box-sizing: border-box !important;
-            z-index: 10 !important;
-
-            /* Clamp to 2 lines */
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-        }
-
-        [data-shaka-player-container] .shaka-text-container span {
-            background-color: rgba(0, 0, 0, 0.8) !important;
-            color: white !important;
-            padding: 0.2em 0.5em !important;
-            border-radius: 0.2em !important;
-            font-size: 2.5vh !important;
-            line-height: 1.4 !important;
-            white-space: pre-wrap !important;
+        /* As a fallback, hide any element that might be a seek bar */
+        .shaka-seek-bar-container {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-
-    <div data-shaka-player-container>
-        <video data-shaka-player id="video"></video>
-        <div id="watermark">PROSTREAM-PRIMA</div>
-    </div>
-
-    <!-- Loading overlay -->
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <div id="loading-text">Sila tunggu beberapa saat..</div>
-        <button id="retry-button" onclick="retryStream()">Cuba Lagi</button>
+    <div class="video-container">
+        <div data-shaka-player-container>
+            <video id="video" data-shaka-player autoplay></video>
+        </div>
     </div>
 
     <script>
-        // Channel configuration
-        const channel = "astro-prima";
-        const streamURL = "https://l18.dp.sooka.my/1000/linear/index.mpd";
-        const proxyUrl =
-          "https://script.google.com/macros/s/AKfycby_vtqSHmyCT34VSB0pLsWgJeXwjJ1WimZHGb_PhE13WazO90Ct3sMgq5PykkJtRjUO/exec?key=primatvmalaysia&channel=" +
-          channel;
+        // UPDATED: Path for the PRIMA stream proxy
+        const PROXY_PATH = '/api/prima-proxy';
 
-        // DOM elements
-        const loadingOverlay = document.getElementById("loading-overlay");
-        const loadingText = document.getElementById("loading-text");
-        const spinner = document.querySelector(".spinner");
-        const retryButton = document.getElementById("retry-button");
+        let player;
 
-        // Helper functions
-        function shuffleArray(array) {
-          let shuffled = [...array];
-          for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-          }
-          return shuffled;
-        }
+        async function initApp() {
+            shaka.polyfill.installAll();
 
-        async function getTokenList() {
-          try {
-            // Add mode=no-cors to bypass CORS for development
-            const res = await fetch(proxyUrl + "&t=" + Date.now(), { 
-              cache: "no-store",
-              mode: 'cors'
-            });
-            const data = await res.json();
-            if (!data.ok) throw new Error("Proxy invalid");
-            let tokens = [];
-            if (Array.isArray(data.record)) {
-              tokens = data.record.map((i) => i?.data?.token).filter(Boolean);
-            } else if (data.token) {
-              tokens = [data.token];
-            }
-            tokens = shuffleArray(tokens);
-            console.log(`🎫 ${tokens.length} token diterima`);
-            return tokens;
-          } catch (err) {
-            console.error("❌ Gagal ambil token:", err);
-            return [];
-          }
-        }
-
-        function getCachedToken() {
-          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-          return localStorage.getItem(key) || "";
-        }
-        
-        function setCachedToken(token) {
-          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-          localStorage.setItem(key, token);
-          console.log(`💾 Cache token ${channel}: ${token.substring(0, 25)}...`);
-        }
-        
-        function clearCachedToken() {
-          const key = "SOOKA_TOKEN_CACHE_" + channel.toUpperCase();
-          localStorage.removeItem(key);
-        }
-
-        function makeControlsFocusable() {
-            console.log('🎯 Making controls focusable for D-pad navigation...');
-            const container = document.querySelector('[data-shaka-player-container]');
-            if (!container) return;
-            const focusableElements = container.querySelectorAll('button, input, [role="slider"], .shaka-range-container');
-            focusableElements.forEach(el => {
-                el.setAttribute('tabindex', '0');
-            });
-            console.log(`✅ Made ${focusableElements.length} elements focusable.`);
-        }
-
-        function ensureFocus() {
-            const container = document.querySelector('[data-shaka-player-container]');
-            const overflowButton = document.querySelector('.shaka-overflow-menu-button');
-            if (container && overflowButton && !container.contains(document.activeElement)) {
-                overflowButton.focus();
-            }
-        }
-        
-        function unmuteVideo() {
-            const video = document.getElementById('video');
-            if (video.muted) {
-                video.muted = false;
-                console.log('🔊 Video has been unmuted.');
-                document.removeEventListener('keydown', unmuteVideo);
-            }
-        }
-
-        function onPlayerErrorEvent(errorEvent) { onPlayerError(event.detail); }
-        function onPlayerError(error) { console.error('Error code', error.code, 'object', error); }
-        function onUIErrorEvent(errorEvent) { onPlayerError(event.detail); }
-        function initFailed(errorEvent) { console.error('❌ Unable to load the UI library!'); }
-
-        async function initPlayer() {
-          spinner.style.display = "block";
-          loadingText.innerText = "Sila tunggu beberapa saat..";
-          retryButton.style.display = "none";
-          loadingOverlay.style.display = "flex";
-
-          const cachedToken = getCachedToken();
-          const tokens = await getTokenList();
-
-          const video = document.querySelector("video");
-          const ui = video["ui"];
-          const controls = ui.getControls();
-          let player = controls.getPlayer();
-
-          player.configure({
-            drm: {
-              clearKeys: {
-                "21759e73f142452aa01acc6d08a86e50":"fc9eaf659647c675315f65747c2553da",
-                "6613bc303647468c974c3c839d5201e9":"5422811c83996a25f51229219b41c410",
-              },
-            },
-            streaming: {
-                lowLatencyMode: true,
-                bufferBehind: 10,
-            },
-          });
-
-          // Configure UI with valid control panel elements
-          ui.configure({
-            addSeekBar: false,
-            addBigPlayButton: true,
-            singleClickForPlayAndPause: false,
-            enableTooltips: false,
-            doubleClickForFullscreen: false,
-
-            controlPanelElements: [
-              'play_pause',
-              'spacer',
-              'overflow_menu',
-              'fullscreen',
-            ],
-            overflowMenuButtons: [
-              'captions',
-              'quality',
-              'language',
-              'chapter',
-              'picture_in_picture',
-              'playback_rate',
-              'recenter_vr',
-              'toggle_stereoscopic',
-            ],
-          });
-
-          // ✅ AUTO ENABLE SUBTITLE (for Sooka embedded subtitles)
-          player.setTextTrackVisibility(true);
-          player.addEventListener('trackschanged', () => {
-            player.setTextTrackVisibility(true);
-            console.log('🎬 Subtitle auto-enabled selepas track detected');
-            
-            // Check for caption tracks
-            const textTracks = player.getTextTracks();
-            const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
-
-            if (captionTrack) {
-                console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
-                player.selectTextTrack(captionTrack);
-                player.setTextTrackVisibility(true);
-                console.log('🎬 Caption track selected and enabled.');
-            } else {
-                console.log('🎬 No subtitle track found.');
-            }
-          });
-
-          // Setup event listeners
-          player.addEventListener('error', onPlayerErrorEvent);
-          controls.addEventListener('error', onUIErrorEvent);
-          
-          video.addEventListener('playing', () => {
-            setTimeout(unmuteVideo, 500);
-          });
-
-          async function tryToken(token, label) {
-            try {
-              player.destroy().catch(() => {});
-              await new Promise((r) => setTimeout(r, 300));
-              player = new shaka.Player(video);
-              player.configure({
-                drm: {
-                  clearKeys: {
-                    "21759e73f142452aa01acc6d08a86e50":"fc9eaf659647c675315f65747c2553da",
-                    "6613bc303647468c974c3c839d5201e9":"5422811c83996a25f51229219b41c410",
-                  },
-                },
-                streaming: {
-                    lowLatencyMode: true,
-                    bufferBehind: 10,
-                },
-              });
-
-              // Register request filter (Authorization)
-              player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                if (
-                  type === shaka.net.NetworkingEngine.RequestType.MANIFEST ||
-                  type === shaka.net.NetworkingEngine.RequestType.SEGMENT
-                ) {
-                  request.headers["authorization"] = "Bearer " + token;
-                }
-              });
-
-              await player.load(streamURL);
-              console.log(`✅ Token (${label}) OK`);
-              setCachedToken(token);
-
-              loadingOverlay.classList.add("fade-out");
-              setTimeout(() => { loadingOverlay.style.display = "none"; }, 700);
-
-              // Pastikan subtitle kekal ON lepas load
-              player.setTextTrackVisibility(true);
-
-              // Reattach UI to new player
-              ui.configure({
-                addSeekBar: false,
-                addBigPlayButton: true,
-                singleClickForPlayAndPause: false,
-                enableTooltips: false,
-                doubleClickForFullscreen: false,
-
-                controlPanelElements: [
-                  'play_pause',
-                  'spacer',
-                  'overflow_menu',
-                  'fullscreen',
-                ],
-                overflowMenuButtons: [
-                  'captions',
-                  'quality',
-                  'language',
-                  'chapter',
-                  'picture_in_picture',
-                  'playback_rate',
-                  'recenter_vr',
-                  'toggle_stereoscopic',
-                ],
-              });
-
-              // Setup event listeners for new player
-              player.addEventListener('error', onPlayerErrorEvent);
-              player.addEventListener('trackschanged', () => {
-                player.setTextTrackVisibility(true);
-                console.log('🎬 Subtitle auto-enabled selepas track detected');
+            if (shaka.Player.isBrowserSupported()) {
+                const video = document.getElementById('video');
+                player = new shaka.Player(video);
                 
-                // Check for caption tracks
-                const textTracks = player.getTextTracks();
-                const captionTrack = textTracks.find(track => track.type === 'text' && track.kind === 'subtitles');
+                // Configure the Shaka Player UI
+                const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
-                if (captionTrack) {
-                    console.log('🎬 Found caption track:', captionTrack.language, captionTrack.label);
-                    player.selectTextTrack(captionTrack);
-                    player.setTextTrackVisibility(true);
-                    console.log('🎬 Caption track selected and enabled.');
-                } else {
-                    console.log('🎬 No subtitle track found.');
+                // Configure a minimal UI for TV/Mobile
+                ui.configure({
+                    controlPanelElements: [
+                        'play_pause',
+                        'overflow_menu',
+                        'fullscreen'
+                    ],
+                    addBigPlayButton: true,
+                    overflowMenuButtons: [
+                        'quality',
+                        'language',
+                        'caption'
+                    ]
+                });
+
+                player.configure({
+                    streaming: {
+                        bufferingGoal: 30,
+                    },
+                    manifest: {
+                        dash: { autoCorrectDrift: true }
+                    }
+                });
+
+                // This is the key part: intercept ALL network requests
+                player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    // For the manifest request, point it to our proxy
+                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                        request.uris = [PROXY_PATH];
+                    } 
+                    // For ALL other requests (like segments), rewrite them to go through our proxy
+                    else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        const uri = request.uris[0];
+                        const fileName = uri.substring(uri.lastIndexOf('/') + 1);
+                        
+                        console.log(`Filtering segment: ${uri} -> ${PROXY_PATH}?segment=${fileName}`);
+                        
+                        request.uris = [`${PROXY_PATH}?segment=${fileName}`];
+                    }
+                });
+
+                // Load the stream using the proxy path
+                try {
+                    await player.load(PROXY_PATH);
+                    console.log('PRIMA stream loaded successfully!');
+                } catch (error) {
+                    console.error('Error loading stream:', error);
+                    document.querySelector('.video-container').innerHTML = `
+                        <div style="color: white; text-align: center;">
+                            <h2>Error Loading Stream</h2>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
                 }
-              });
 
-              // Fix: Use video.play() instead of player.play()
-              try {
-                await video.play();
-                console.log('✅ Autoplay started (muted). Will unmute shortly.');
-              } catch (error) {
-                console.error('Error starting playback:', error);
-              }
-
-              return true;
-            } catch (err) {
-              console.warn(`⚠️ Token (${label}) gagal: ${err.message}`);
-              return false;
+            } else {
+                console.error('Browser not supported!');
+                document.querySelector('.video-container').innerHTML = `
+                    <div style="color: white; text-align: center;">
+                        <h2>Error</h2>
+                        <p>This browser is not supported for streaming.</p>
+                    </div>
+                `;
             }
-          }
-
-          if (cachedToken) {
-            const ok = await tryToken(cachedToken, "cached");
-            if (ok) return;
-            clearCachedToken();
-          }
-
-          for (let i = 0; i < tokens.length; i++) {
-            const ok = await tryToken(tokens[i], `list ke-${i + 1}`);
-            if (ok) return;
-          }
-
-          console.error("😢 Semua token gagal.");
-          spinner.style.display = "none";
-          loadingText.innerText = "Maaf, siaran ini bermasalah sekarang.";
-          retryButton.style.display = "inline-block";
         }
 
-        function retryStream() {
-          console.log("🔁 Cuba semula diminta user");
-          initPlayer();
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-          if (shaka.Player.isBrowserSupported()) {
-            document.addEventListener('shaka-ui-loaded', () => {
-                initPlayer();
-                makeControlsFocusable();
-            });
-          } else console.error("❌ Shaka Player tidak disokong");
-        });
-
-        document.addEventListener('keydown', unmuteVideo);
-        
-        document.addEventListener('keydown', (e) => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
-                setTimeout(ensureFocus, 0);
-            }
-        });
-
-        document.addEventListener('shaka-ui-load-failed', initFailed);
+        document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
