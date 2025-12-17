@@ -1,70 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro Ceria - Live</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.7.0/dist/controls.css">
-    <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.7.0/dist/shaka-player.ui.js"></script>
-    <style>
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
-        .video-container { width: 100%; max-width: 900px; aspect-ratio: 16/9; }
-        video { width: 100%; height: 100%; }
-    </style>
-</head>
-<body>
+// File: /api/ceria-proxy.js
 
-<div class="video-container" data-shaka-player-container>
-    <video id="video" data-shaka-player-video autoplay></video>
-</div>
+export const config = {
+  runtime: 'edge',
+};
 
-<script>
-    async function initApp() {
-        shaka.polyfill.installAll();
+export default async function handler(req) {
+  const MANIFEST_URL = "https://get.perfecttv.net/dash2.mpd?username=vip_r92bmh1k&password=yb3IpqrB&channel=ceria";
+  const LICENSE_URL = "https://linearjitp-playback.astro.com.my/widevine/getlicense";
 
-        const video = document.getElementById('video');
-        const player = new shaka.Player(); // Removed 'video' from constructor
-        
-        // 1. New way to attach video element (Fixes deprecation warning)
-        await player.attach(video);
+  const { searchParams } = new URL(req.url);
+  const segmentUrl = searchParams.get('url');
+  const isLicenseRequest = searchParams.get('type') === 'license';
 
-        // 2. Configure DRM with Robustness (Fixes warnings)
-        player.configure({
-            drm: {
-                servers: {
-                    // This URL might need to be proxied if geoblocked
-                    'com.widevine.alpha': 'https://widevine-proxy.astro.com.my/proxy'
-                },
-                advanced: {
-                    'com.widevine.alpha': {
-                        'videoRobustness': 'SW_SECURE_DECODE',
-                        'audioRobustness': 'SW_SECURE_DECODE'
-                    }
-                }
-            }
-        });
+  let targetUrl;
+  let options = {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 v3 (Linux; Android 9)'
+    }
+  };
 
-        // 3. Handle License Request Headers (Astro often requires these)
-        player.getNetworkingEngine().registerRequestFilter((type, request) => {
-            if (type == shaka.net.NetworkingEngine.RequestType.LICENSE) {
-                // If you have a token, add it here. Example:
-                // request.headers['Authorization'] = 'Bearer YOUR_TOKEN';
-                console.log('Requesting License...');
-            }
-        });
+  try {
+    if (isLicenseRequest) {
+      // License requests are POST requests with a specific body and headers
+      targetUrl = LICENSE_URL;
+      options.method = 'POST';
+      
+      // Copy the essential headers from the player's request
+      const playerHeaders = Object.fromEntries(req.headers.entries());
+      options.headers = {
+        'Content-Type': playerHeaders['content-type'],
+        // Add any other headers the license server might need
+      };
 
-        const manifestUri = '/api/ceria-proxy';
+      // Copy the body from the player's request
+      options.body = req.body;
+    } else if (segmentUrl) {
+      // The player provides the full segment URL
+      targetUrl = decodeURIComponent(segmentUrl);
+    } else {
+      // Default to manifest request
+      targetUrl = MANIFEST_URL;
+    }
+    
+    console.log(`[PROXY] Fetching: ${targetUrl}`);
 
-        try {
-            await player.load(manifestUri);
-            console.log('Manifest loaded successfully!');
-        } catch (e) {
-            console.error('Error Code:', e.code, 'Details:', e);
-        }
+    const response = await fetch(targetUrl, options);
+
+    if (!response.ok) {
+      console.error(`[PROXY] Source Error for ${targetUrl}: ${response.status} ${response.statusText}`);
+      return new Response(`Source Error: ${response.statusText}`, { status: response.status });
     }
 
-    document.addEventListener('shaka-ui-loaded', initApp);
-    document.addEventListener('DOMContentLoaded', initApp);
-</script>
-</body>
-</html>
+    // Proxy the response headers and body
+    const responseHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Content-Type': response.headers.get('content-type') || 'application/octet-stream',
+    };
+
+    // For licenses, the content type is crucial
+    if (isLicenseRequest) {
+        responseHeaders['Content-Type'] = 'application/octet-stream';
+    }
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+
+  } catch (error) {
+    console.error(`[PROXY] Proxy Error:`, error);
+    return new Response("Proxy Error: " + error.message, { status: 500 });
+  }
+}
