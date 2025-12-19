@@ -210,7 +210,7 @@
             const video = document.getElementById('video');
             player = new shaka.Player(video);
 
-            // Configure for fast loading
+            // Simplified configuration with only valid keys
             player.configure({
                 streaming: {
                     bufferingGoal: 5,
@@ -221,8 +221,8 @@
                 },
                 abr: {
                     enabled: true,
-                    defaultBandwidthEstimate: 500000,
-                    fastSwitchEnabled: true
+                    defaultBandwidthEstimate: 500000
+                    // Removed fastSwitchEnabled as it's not a valid key in this version
                 }
             });
 
@@ -268,12 +268,14 @@
                 updateMuteButton();
             });
 
-            // Load the stream
+            // Load the stream with better error handling
             try {
+                console.log('Loading stream from:', PROXY_PATH);
                 await player.load(PROXY_PATH);
+                console.log('Stream loaded successfully');
             } catch (error) {
                 console.error('Error loading stream:', error);
-                showError('Failed to load stream');
+                showError(`Failed to load stream: ${error.message}`);
             }
         }
 
