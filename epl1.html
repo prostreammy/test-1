@@ -7,6 +7,7 @@
     <title>EPL1 TV Player</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Full-screen layout for TV and Mobile */
         html, body {
@@ -15,7 +16,8 @@
             width: 100vw;
             height: 100vh;
             background-color: #000;
-            overflow: hidden; /* Prevents scrollbars */
+            overflow: hidden;
+            font-family: 'Netflix Sans', 'Helvetica Neue', Arial, sans-serif;
         }
 
         /* Container to center the video */
@@ -25,49 +27,315 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
+            background: linear-gradient(to bottom, #141414, #000);
         }
 
         /* Video element to fill the container while maintaining aspect ratio */
         video {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Ensures the video is not stretched or cropped */
-        }
-        
-        /* --- Shaka Player UI Customizations for TV/Mobile --- */
-
-        /* Make the control bar larger and more accessible */
-        .shaka-controls-button-panel {
-            font-size: 24px; /* Larger icons */
-        }
-        
-        /* Increase the size of each button for better touch/remote targets */
-        .shaka-controls-button-panel > button {
-            padding: 12px;
-            margin: 0 8px;
+            object-fit: contain;
+            background: #000;
         }
 
-        /* Style the bottom controls bar for better visibility */
-        .shaka-bottom-controls {
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
-            padding-bottom: 2em; /* Add space from the edge of the screen */
+        /* Professional Loading Spinner */
+        .loading-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            transition: opacity 0.5s ease;
         }
 
-        /* Ensure the overflow menu is also styled consistently */
-        .shaka-overflow-menu {
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .loading-spinner::before,
+        .loading-spinner::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #e50914;
+            animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+        }
+
+        .loading-spinner::after {
+            border-top-color: #ffffff;
+            animation-delay: 0.25s;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .loading-text {
+            color: #ffffff;
             font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
         }
 
-        /* As a fallback, hide any element that might be a seek bar */
+        .loading-subtitle {
+            color: #b3b3b3;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        /* Error State Styling */
+        .error-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ffffff;
+            z-index: 100;
+            padding: 40px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .error-icon {
+            font-size: 48px;
+            color: #e50914;
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            font-size: 16px;
+            color: #b3b3b3;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .retry-button {
+            background: #e50914;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .retry-button:hover {
+            background: #f40612;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
+        }
+
+        /* Custom Shaka Player UI Styles */
+        .shaka-video-container {
+            font-family: 'Netflix Sans', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        /* Control Bar Styling */
+        .shaka-bottom-controls {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .shaka-controls-button-panel {
+            font-size: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .shaka-controls-button-panel > button {
+            padding: 10px;
+            margin: 0 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .shaka-controls-button-panel > button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .shaka-controls-button-panel > button:active {
+            transform: scale(0.95);
+        }
+
+        /* Play/Pause Button Styling */
+        .shaka-play-button {
+            background: rgba(229, 9, 20, 0.9) !important;
+            width: 56px !important;
+            height: 56px !important;
+            font-size: 24px !important;
+        }
+
+        .shaka-play-button:hover {
+            background: rgba(229, 9, 20, 1) !important;
+        }
+
+        /* Overflow Menu Styling */
+        .shaka-overflow-menu {
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 0;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .shaka-overflow-menu button {
+            padding: 12px 20px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .shaka-overflow-menu button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Big Play Button */
+        .shaka-big-play-button {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .shaka-big-play-button:hover {
+            background: rgba(229, 9, 20, 0.9);
+            border-color: #e50914;
+            transform: scale(1.1);
+        }
+
+        /* Hide Seek Bar */
         .shaka-seek-bar-container {
             display: none !important;
+        }
+
+        /* Quality Badge */
+        .quality-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .shaka-controls-button-panel {
+                font-size: 18px;
+            }
+            
+            .shaka-controls-button-panel > button {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .shaka-play-button {
+                width: 48px !important;
+                height: 48px !important;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
         }
     </style>
 </head>
 <body>
     <div class="video-container">
-        <div data-shaka-player-container>
-            <video id="video" data-shaka-player autoplay></video>
+        <!-- Professional Loading Spinner -->
+        <div class="loading-container" id="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading Stream</div>
+            <div class="loading-subtitle" id="loading-subtitle">Preparing your content...</div>
+        </div>
+
+        <!-- Error Container (Hidden by default) -->
+        <div class="error-container" id="error-container" style="display: none;">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="error-title">Unable to Load Stream</div>
+            <div class="error-message" id="error-message">
+                We're having trouble connecting to the stream. Please check your connection and try again.
+            </div>
+            <button class="retry-button" id="retry-button">
+                <i class="fas fa-redo"></i>
+                Retry
+            </button>
+        </div>
+
+        <!-- Quality Badge -->
+        <div class="quality-badge" id="quality-badge" style="display: none;">
+            <span id="quality-text">HD</span>
+        </div>
+
+        <!-- Video Player -->
+        <div data-shaka-player-container class="shaka-video-container">
+            <video id="video" data-shaka-player autoplay muted playsinline></video>
         </div>
     </div>
 
@@ -76,6 +344,8 @@
         const PROXY_PATH = '/api/epl1-proxy';
 
         let player;
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
 
         async function initApp() {
             shaka.polyfill.installAll();
@@ -84,21 +354,41 @@
                 const video = document.getElementById('video');
                 player = new shaka.Player(video);
                 
+                // Hide loading container when player is ready
+                player.addEventListener('loading', () => {
+                    updateLoadingText('Connecting to stream...');
+                });
+                
+                player.addEventListener('loaded', () => {
+                    hideLoading();
+                    // Ensure autoplay after loading
+                    video.play().catch(e => {
+                        console.error('Autoplay failed:', e);
+                        handleAutoplayError();
+                    });
+                });
+                
+                player.addEventListener('error', (error) => {
+                    console.error('Player error:', error);
+                    showError(error.detail || 'Failed to load stream');
+                });
+
+                // Track quality changes
+                player.addEventListener('adaptation', () => {
+                    updateQualityBadge();
+                });
+
                 // Configure the Shaka Player UI
                 const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
                 // Configure a minimal UI for TV/Mobile
                 ui.configure({
-                    // Define the minimal controls to show on the main bar.
-                    // 'volume' is removed, 'overflow_menu' is added.
                     controlPanelElements: [
                         'play_pause',
                         'overflow_menu',
                         'fullscreen'
                     ],
-                    // Add a large, centered play button for better UX
                     addBigPlayButton: true,
-                    // Configure the overflow menu (three dots) for essential settings
                     overflowMenuButtons: [
                         'quality',
                         'language',
@@ -106,60 +396,163 @@
                     ]
                 });
 
+                // Optimize player configuration for faster initial load
                 player.configure({
                     streaming: {
-                        bufferingGoal: 30,
+                        bufferingGoal: 10,
+                        rebufferingGoal: 2,
+                        startAtSegmentBoundary: true,
+                        lowLatencyMode: true,
+                        jumpLargeGaps: true,
+                        defaultBandwidthEstimate: 1000000,
+                        fastSwitchEnabled: true,
+                        useNativeHlsOnSafari: true
                     },
                     manifest: {
-                        dash: { autoCorrectDrift: true }
+                        dash: { 
+                            autoCorrectDrift: true,
+                            updatePeriod: 30
+                        },
+                        disableSegmentPrefetch: false
+                    },
+                    abr: {
+                        enabled: true,
+                        defaultBandwidthEstimate: 500000,
+                        switchInterval: 1,
+                        bandwidthUpgradeTarget: 0.85,
+                        bandwidthDowngradeTarget: 0.95
                     }
                 });
 
-                // This is the key part: intercept ALL network requests
+                // Network request filter
                 player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                    // For the manifest request, point it to our proxy
                     if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
                         request.uris = [PROXY_PATH];
-                    } 
-                    // For ALL other requests (like segments), rewrite them to go through our proxy
-                    else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                        // The URI might be relative or absolute. We just need the filename.
+                    } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
                         const uri = request.uris[0];
                         const fileName = uri.substring(uri.lastIndexOf('/') + 1);
-                        
-                        // Log the change for debugging
-                        console.log(`Filtering segment: ${uri} -> ${PROXY_PATH}?segment=${fileName}`);
-                        
-                        // Rewrite the URI to point to our proxy with the filename as a query param
                         request.uris = [`${PROXY_PATH}?segment=${fileName}`];
                     }
                 });
 
-                // Load the stream using the proxy path
-                try {
-                    await player.load(PROXY_PATH);
-                    console.log('EPL1 stream loaded successfully!');
-                } catch (error) {
-                    console.error('Error loading stream:', error);
-                    document.querySelector('.video-container').innerHTML = `
-                        <div style="color: white; text-align: center;">
-                            <h2>Error Loading Stream</h2>
-                            <p>${error.message}</p>
-                        </div>
-                    `;
-                }
+                // Load the stream
+                loadStream();
 
             } else {
-                console.error('Browser not supported!');
-                document.querySelector('.video-container').innerHTML = `
-                    <div style="color: white; text-align: center;">
-                        <h2>Error</h2>
-                        <p>This browser is not supported for streaming.</p>
-                    </div>
-                `;
+                showError('This browser is not supported for streaming.');
             }
         }
 
+        async function loadStream() {
+            try {
+                updateLoadingText('Loading stream data...');
+                await player.load(PROXY_PATH);
+                console.log('EPL1 stream loaded successfully!');
+            } catch (error) {
+                console.error('Error loading stream:', error);
+                showError(error.message || 'Failed to load stream');
+            }
+        }
+
+        function hideLoading() {
+            const loadingContainer = document.getElementById('loading-container');
+            loadingContainer.style.opacity = '0';
+            setTimeout(() => {
+                loadingContainer.style.display = 'none';
+            }, 500);
+        }
+
+        function showLoading() {
+            const loadingContainer = document.getElementById('loading-container');
+            loadingContainer.style.display = 'flex';
+            loadingContainer.style.opacity = '1';
+        }
+
+        function updateLoadingText(text) {
+            document.getElementById('loading-subtitle').textContent = text;
+        }
+
+        function showError(message) {
+            hideLoading();
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            errorContainer.style.display = 'block';
+            errorContainer.classList.add('fade-in');
+        }
+
+        function hideError() {
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.style.display = 'none';
+        }
+
+        function handleAutoplayError() {
+            const video = document.getElementById('video');
+            if (video.muted) {
+                video.muted = false;
+                video.play().catch(e2 => {
+                    console.error('Unmuted autoplay also failed:', e2);
+                    showError('Autoplay was blocked. Please click the play button to start.');
+                });
+            }
+        }
+
+        function updateQualityBadge() {
+            if (!player) return;
+            
+            const tracks = player.getVariantTracks();
+            const activeTrack = tracks.find(track => track.active);
+            
+            if (activeTrack) {
+                const qualityBadge = document.getElementById('quality-badge');
+                const qualityText = document.getElementById('quality-text');
+                
+                let quality = 'Auto';
+                if (activeTrack.height >= 1080) {
+                    quality = '1080p';
+                } else if (activeTrack.height >= 720) {
+                    quality = '720p';
+                } else if (activeTrack.height >= 480) {
+                    quality = '480p';
+                } else {
+                    quality = 'SD';
+                }
+                
+                qualityText.textContent = quality;
+                qualityBadge.style.display = 'block';
+                
+                // Hide after 3 seconds
+                setTimeout(() => {
+                    qualityBadge.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Retry button functionality
+        document.getElementById('retry-button').addEventListener('click', () => {
+            if (retryCount < MAX_RETRIES) {
+                retryCount++;
+                hideError();
+                showLoading();
+                updateLoadingText(`Retrying... (${retryCount}/${MAX_RETRIES})`);
+                setTimeout(() => {
+                    loadStream();
+                }, 1000);
+            } else {
+                showError('Maximum retry attempts reached. Please refresh the page.');
+            }
+        });
+
+        // Handle visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && player && player.getMediaElement().paused) {
+                player.getMediaElement().play().catch(e => {
+                    console.error('Autoplay after visibility change failed:', e);
+                });
+            }
+        });
+
+        // Initialize the app when DOM is ready
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
