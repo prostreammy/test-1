@@ -1,307 +1,166 @@
-<!doctype html>
+<!-- File: epl1.html -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Streaming Player — Ria</title>
-  <style>
-    :root{
-      --bg:#0f1720;
-      --card:#0b1220;
-      --muted:#9aa6b2;
-      --accent:#1f8feb;
-      --glass: rgba(255,255,255,0.03);
-    }
-    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:linear-gradient(180deg,#071024 0%, #071627 100%);color:#e6eef6}
-    .wrap{max-width:980px;margin:36px auto;padding:18px;}
-    .player-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:14px;box-shadow: 0 6px 30px rgba(2,6,23,0.6);display:grid;grid-template-columns:1fr 320px;gap:12px;align-items:start}
-    @media (max-width:880px){.player-card{grid-template-columns:1fr;}.sidebar{order:2}}
-    .video-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000}
-    video{width:100%;height:100%;display:block;background:#000;max-height:66vh}
-    .overlay{
-      position:absolute;left:12px;top:12px;display:flex;gap:10px;align-items:center;
-      background:var(--glass);padding:8px;border-radius:10px;backdrop-filter: blur(6px);
-    }
-    .title{font-weight:600}
-    .meta{font-size:13px;color:var(--muted)}
-    .controls{display:flex;gap:8px;align-items:center;margin-top:8px}
-    .btn{
-      background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:inherit;
-      cursor:pointer;font-weight:600;min-width:44px;text-align:center
-    }
-    .btn:hover{transform:translateY(-1px)}
-    .sidebar{padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-radius:10px}
-    .logo{width:100%;height:120px;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(255,255,255,0.02);border-radius:8px}
-    .logo img{max-width:100%;max-height:100%}
-    label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
-    select,input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    .small{font-size:13px;color:var(--muted);margin-top:8px}
-    .note{font-size:12px;color:var(--muted);margin-top:12px}
-    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .copyok{color:#7cf5a4;font-weight:600}
-  </style>
-  <!-- dash.js from CDN -->
-  <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPL1 TV Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
+    <style>
+        /* Full-screen layout for TV and Mobile */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            overflow: hidden; /* Prevents scrollbars */
+        }
+
+        /* Container to center the video */
+        .video-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Video element to fill the container while maintaining aspect ratio */
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensures the video is not stretched or cropped */
+        }
+        
+        /* --- Shaka Player UI Customizations for TV/Mobile --- */
+
+        /* Make the control bar larger and more accessible */
+        .shaka-controls-button-panel {
+            font-size: 24px; /* Larger icons */
+        }
+        
+        /* Increase the size of each button for better touch/remote targets */
+        .shaka-controls-button-panel > button {
+            padding: 12px;
+            margin: 0 8px;
+        }
+
+        /* Style the bottom controls bar for better visibility */
+        .shaka-bottom-controls {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            padding-bottom: 2em; /* Add space from the edge of the screen */
+        }
+
+        /* Ensure the overflow menu is also styled consistently */
+        .shaka-overflow-menu {
+            font-size: 18px;
+        }
+
+        /* As a fallback, hide any element that might be a seek bar */
+        .shaka-seek-bar-container {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div>
-        <h2 style="margin:0">Ria — Live Stream</h2>
-        <div class="meta">Source: PerfectTV (DASH)</div>
-      </div>
-      <div class="meta">Made for VS Code Live Server</div>
+    <div class="video-container">
+        <div data-shaka-player-container>
+            <video id="video" data-shaka-player autoplay></video>
+        </div>
     </div>
 
-    <div class="player-card" role="region" aria-label="Streaming player">
-      <div>
-        <div class="video-wrap" id="videoContainer">
-          <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+    <script>
+        // Hardcoded paths for the EPL1 stream
+        const PROXY_PATH = '/api/epl1-proxy';
 
-          <div class="overlay" id="videoOverlay">
-            <img id="channelLogo" src="https://get.perfecttv.net/logo/ria.png" alt="logo" style="width:56px;height:32px;border-radius:4px;object-fit:contain">
-            <div>
-              <div class="title" id="channelTitle">119 Ria</div>
-              <div class="meta">MALAYSIA · DASH</div>
-            </div>
-          </div>
-        </div>
+        let player;
 
-        <div class="controls" style="margin-top:12px">
-          <button id="playBtn" class="btn">Play</button>
-          <button id="pauseBtn" class="btn">Pause</button>
-          <button id="fsBtn" class="btn">Fullscreen</button>
-          <button id="copyBtn" class="btn">Copy URL</button>
-          <div style="flex:1"></div>
-          <div id="status" class="small">Ready</div>
-        </div>
+        async function initApp() {
+            shaka.polyfill.installAll();
 
-        <div style="display:flex;gap:10px;margin-top:8px;align-items:center">
-          <label style="width:120px;margin:0">Quality</label>
-          <select id="qualitySelect" style="max-width:220px">
-            <option>Auto</option>
-          </select>
-        </div>
-      </div>
+            if (shaka.Player.isBrowserSupported()) {
+                const video = document.getElementById('video');
+                player = new shaka.Player(video);
+                
+                // Configure the Shaka Player UI
+                const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
-      <aside class="sidebar">
-        <div class="logo"><img src="https://is.gd/prima.png" alt="group logo"></div>
+                // Configure a minimal UI for TV/Mobile
+                ui.configure({
+                    // Define the minimal controls to show on the main bar.
+                    // 'volume' is removed, 'overflow_menu' is added.
+                    controlPanelElements: [
+                        'play_pause',
+                        'overflow_menu',
+                        'fullscreen'
+                    ],
+                    // Add a large, centered play button for better UX
+                    addBigPlayButton: true,
+                    // Configure the overflow menu (three dots) for essential settings
+                    overflowMenuButtons: [
+                        'quality',
+                        'language',
+                        'caption'
+                    ]
+                });
 
-        <label>Manifest URL</label>
-        <input id="manifestInput" type="text" value="https://get.perfecttv.net/dash2.mpd?channel=astroria&username=vip_level7&password=vip_level7">
+                player.configure({
+                    streaming: {
+                        bufferingGoal: 30,
+                    },
+                    manifest: {
+                        dash: { autoCorrectDrift: true }
+                    }
+                });
 
-        <label>ClearKey (KID:KEY)</label>
-        <input id="licenseInput" type="text" value="3f726fd5cbbf5944437a4dbfab431b10:376b009796e4ad50ea8f68d796676692">
+                // This is the key part: intercept ALL network requests
+                player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    // For the manifest request, point it to our proxy
+                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                        request.uris = [PROXY_PATH];
+                    } 
+                    // For ALL other requests (like segments), rewrite them to go through our proxy
+                    else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        // The URI might be relative or absolute. We just need the filename.
+                        const uri = request.uris[0];
+                        const fileName = uri.substring(uri.lastIndexOf('/') + 1);
+                        
+                        // Log the change for debugging
+                        console.log(`Filtering segment: ${uri} -> ${PROXY_PATH}?segment=${fileName}`);
+                        
+                        // Rewrite the URI to point to our proxy with the filename as a query param
+                        request.uris = [`${PROXY_PATH}?segment=${fileName}`];
+                    }
+                });
 
-        <div class="note">
-          The player will attempt to use the provided ClearKey (hex KID:key). If blank, the player will try unauthenticated playback.
-        </div>
+                // Load the stream using the proxy path
+                try {
+                    await player.load(PROXY_PATH);
+                    console.log('EPL1 stream loaded successfully!');
+                } catch (error) {
+                    console.error('Error loading stream:', error);
+                    document.querySelector('.video-container').innerHTML = `
+                        <div style="color: white; text-align: center;">
+                            <h2>Error Loading Stream</h2>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
 
-        <button id="loadBtn" class="btn" style="margin-top:12px;width:100%">Load stream</button>
-
-        <div class="note" style="margin-top:14px">
-          Troubleshooting:
-          <ul style="padding-left:18px">
-            <li>Use Live Server or any HTTPS origin if browser blocks mixed content.</li>
-            <li>If DRM fails, confirm the license scheme and credentials are correct.</li>
-          </ul>
-        </div>
-      </aside>
-    </div>
-
-    <div style="text-align:center;color:var(--muted);margin-top:12px">Player built with dash.js · Responsive · ClearKey helper</div>
-  </div>
-
-  <script>
-    // ====== Utility functions to convert hex -> base64url ======
-    function hexToUint8Array(hex) {
-      if (!hex) return new Uint8Array();
-      const clean = hex.replace(/[^0-9a-fA-F]/g, '');
-      const out = new Uint8Array(clean.length / 2);
-      for (let i = 0; i < clean.length; i += 2) {
-        out[i / 2] = parseInt(clean.substr(i, 2), 16);
-      }
-      return out;
-    }
-    function uint8ToBase64Url(bytes) {
-      // bytes -> standard b64 -> base64url (no padding)
-      let binary = '';
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
-      let b64 = btoa(binary);
-      // base64url
-      return b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    }
-
-    // ====== Player setup ======
-    const video = document.getElementById('videoPlayer');
-    let player = null;
-
-    const statusEl = document.getElementById('status');
-    function setStatus(s){ statusEl.textContent = s; }
-
-    // Default values from your playlist entry
-    const defaultManifest = document.getElementById('manifestInput').value.trim();
-    const defaultLicense = document.getElementById('licenseInput').value.trim();
-
-    // create/attach dash.js player (idempotent)
-    function createPlayer(manifestUrl, licenseHexPair) {
-      if (player) {
-        try { player.reset(); } catch(e) {}
-        player = null;
-      }
-
-      player = dashjs.MediaPlayer().create();
-      player.updateSettings({streaming: {scheduleWhilePaused: false}});
-      player.initialize(video, manifestUrl, false);
-
-      // Attach events for status & quality
-      player.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, function() {
-        setStatus('Stream initialized');
-        populateQuality();
-      });
-      player.on(dashjs.MediaPlayer.events.ERROR, function(e){
-        console.error('dashjs error', e);
-        setStatus('Error: ' + (e && e.error ? e.error : JSON.stringify(e)));
-      });
-
-      // If we have a license in hex (KID:KEY), attempt ClearKey injection
-      if (licenseHexPair && licenseHexPair.includes(':')) {
-        const parts = licenseHexPair.split(':').map(s => s.trim());
-        if (parts.length === 2 && parts[0].length && parts[1].length) {
-          try {
-            // Convert to base64url
-            const kidB64url = uint8ToBase64Url(hexToUint8Array(parts[0]));
-            const keyB64url = uint8ToBase64Url(hexToUint8Array(parts[1]));
-
-            // Build ClearKey JSON as expected by EME (and encoded in data: URI)
-            // Format compatible with dash.js 'serverURL' trick for clearkey
-            const serverResponse = {
-              keys: [
-                { kty: "oct", kid: kidB64url, k: keyB64url }
-              ]
-            };
-            const json = JSON.stringify(serverResponse);
-            const b64 = btoa(json).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); // base64url style
-            // Some players expect 'data:application/json;base64,...' with standard b64.
-            // We'll supply both styles but dash.js expects serverURL to return the JSON,
-            // so we provide a data: URI with base64 encoded JSON (standard b64).
-            const stdB64 = btoa(json);
-            const dataURI = 'data:application/json;base64,' + stdB64;
-
-            player.setProtectionData({
-              "org.w3.clearkey": {
-                // The "serverURL" here is a data: URI that contains a ClearKey JSON response.
-                serverURL: dataURI
-              }
-            });
-
-            setStatus('ClearKey configured (KID set).');
-          } catch (err) {
-            console.warn('Failed to configure ClearKey', err);
-            setStatus('Warning: ClearKey setup failed.');
-          }
+            } else {
+                console.error('Browser not supported!');
+                document.querySelector('.video-container').innerHTML = `
+                    <div style="color: white; text-align: center;">
+                        <h2>Error</h2>
+                        <p>This browser is not supported for streaming.</p>
+                    </div>
+                `;
+            }
         }
-      } else {
-        setStatus('No ClearKey provided; attempting normal playback.');
-      }
-    }
 
-    // Populate quality / bitrate selection
-    function populateQuality(){
-      const qSel = document.getElementById('qualitySelect');
-      qSel.innerHTML = '';
-      const autoOpt = document.createElement('option');
-      autoOpt.textContent = 'Auto';
-      autoOpt.value = 'auto';
-      qSel.appendChild(autoOpt);
-
-      try {
-        const reps = player.getBitrateInfoListFor('video') || [];
-        // Collect unique heights or bandwidth labels
-        const seen = new Set();
-        reps.sort((a,b)=>b.height-a.height);
-        reps.forEach(function(r){
-          const label = r.height ? (r.height + 'p') : (Math.round(r.bitrate/1000)+' kbps');
-          if (!seen.has(label)) {
-            const opt = document.createElement('option');
-            opt.value = r.qualityIndex;
-            opt.textContent = label + ' — ' + Math.round(r.bitrate/1000) + ' kbps';
-            qSel.appendChild(opt);
-            seen.add(label);
-          }
-        });
-      } catch(e){
-        console.warn(e);
-      }
-
-      qSel.onchange = function(){
-        const v = qSel.value;
-        if (v === 'auto') {
-          player.setAutoSwitchQualityFor('video', true);
-          setStatus('Quality: Auto');
-        } else {
-          player.setAutoSwitchQualityFor('video', false);
-          // qualityIndex expects an integer index (0 = lowest)
-          const index = parseInt(v, 10);
-          if (!isNaN(index)) {
-            try {
-              player.setQualityFor('video', index);
-              setStatus('Quality: manual');
-            } catch(e){ console.warn(e); }
-          }
-        }
-      };
-    }
-
-    // Controls
-    document.getElementById('playBtn').addEventListener('click', function(){
-      video.play().catch(e=>console.warn(e));
-    });
-    document.getElementById('pauseBtn').addEventListener('click', function(){
-      video.pause();
-    });
-    document.getElementById('fsBtn').addEventListener('click', function(){
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        document.getElementById('videoContainer').requestFullscreen().catch(()=>{/*ignore*/});
-      }
-    });
-    document.getElementById('copyBtn').addEventListener('click', function(){
-      const url = document.getElementById('manifestInput').value.trim();
-      navigator.clipboard && navigator.clipboard.writeText(url).then(()=> {
-        const old = statusEl.textContent;
-        statusEl.textContent = 'Copied URL';
-        setTimeout(()=> statusEl.textContent = old, 1200);
-      }).catch(()=> {
-        setStatus('Copy failed');
-      });
-    });
-
-    document.getElementById('loadBtn').addEventListener('click', function(){
-      const m = document.getElementById('manifestInput').value.trim();
-      const lic = document.getElementById('licenseInput').value.trim();
-      setStatus('Loading manifest...');
-      createPlayer(m, lic);
-    });
-
-    // initialize with defaults
-    createPlayer(defaultManifest, defaultLicense);
-
-    // Auto populate quality after a small delay (dash may need a moment)
-    setTimeout(()=> populateQuality(), 1600);
-
-    // Expose player in console for debugging
-    window.dashPlayer = { playerInstance: () => player, videoElement: video };
-
-    // Accessibility & small UX touches
-    video.addEventListener('playing', ()=> setStatus('Playing'));
-    video.addEventListener('pause', ()=> setStatus('Paused'));
-    video.addEventListener('error', (e)=> {
-      console.error('Video element error', e);
-      setStatus('Playback error');
-    });
-  </script>
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
