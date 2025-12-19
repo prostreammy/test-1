@@ -207,81 +207,81 @@
                 return;
             }
 
-            const video = document.getElementById('video');
-            const videoContainer = document.getElementById('video-container');
+            // This event fires when the UI (and the player) are ready
+            document.addEventListener('shaka-ui-loaded', async (event) => {
+                const video = document.getElementById('video');
+                const ui = video['ui'];
+                
+                // Get the player instance created by the UI
+                player = ui.getControls().getPlayer();
 
-            // IMPORTANT: Get the player and UI overlay from the data attributes
-            // instead of creating a "new shaka.Player"
-            const ui = video['ui'];
-            player = ui.getControls().getPlayer();
+                // Configure the player
+                player.configure({
+                    streaming: {
+                        bufferingGoal: 5,
+                        rebufferingGoal: 1,
+                        startAtSegmentBoundary: true,
+                        lowLatencyMode: true,
+                        useNativeHlsOnSafari: true
+                    },
+                    abr: {
+                        enabled: true,
+                        defaultBandwidthEstimate: 500000
+                    }
+                });
 
-            // Simplified configuration
-            player.configure({
-                streaming: {
-                    bufferingGoal: 5,
-                    rebufferingGoal: 1,
-                    startAtSegmentBoundary: true,
-                    lowLatencyMode: true,
-                    useNativeHlsOnSafari: true
-                },
-                abr: {
-                    enabled: true,
-                    defaultBandwidthEstimate: 500000
+                // Network request filter
+                player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                        request.uris = [PROXY_PATH];
+                    } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        const uri = request.uris[0];
+                        const fileName = uri.substring(uri.lastIndexOf('/') + 1);
+                        request.uris = [`${PROXY_PATH}?segment=${fileName}`];
+                    }
+                });
+
+                // Event listeners
+                player.addEventListener('loading', () => {
+                    document.getElementById('loading').style.display = 'block';
+                });
+
+                player.addEventListener('loaded', () => {
+                    document.getElementById('loading').style.display = 'none';
+                    attemptAutoplay();
+                });
+
+                player.addEventListener('error', (event) => {
+                    console.error('Player error:', event.detail);
+                    showError('Failed to load stream');
+                });
+
+                // Video element listeners (Standard HTML5 events)
+                video.addEventListener('play', () => {
+                    isPlaying = true;
+                    updatePlayPauseButton();
+                });
+
+                video.addEventListener('pause', () => {
+                    isPlaying = false;
+                    updatePlayPauseButton();
+                });
+
+                video.addEventListener('volumechange', () => {
+                    isMuted = video.muted;
+                    updateMuteButton();
+                });
+
+                // Load the stream
+                try {
+                    await player.load(PROXY_PATH);
+                } catch (error) {
+                    if (error.code != shaka.util.Error.Code.LOAD_INTERRUPTED) {
+                        console.error('Error loading stream:', error);
+                        showError(`Failed to load stream: ${error.message}`);
+                    }
                 }
             });
-
-            // Network request filter
-            player.getNetworkingEngine().registerRequestFilter((type, request) => {
-                if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
-                    request.uris = [PROXY_PATH];
-                } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                    const uri = request.uris[0];
-                    const fileName = uri.substring(uri.lastIndexOf('/') + 1);
-                    request.uris = [`${PROXY_PATH}?segment=${fileName}`];
-                }
-            });
-
-            // Event listeners
-            player.addEventListener('loading', () => {
-                document.getElementById('loading').style.display = 'block';
-            });
-
-            player.addEventListener('loaded', () => {
-                document.getElementById('loading').style.display = 'none';
-                attemptAutoplay();
-            });
-
-            player.addEventListener('error', (event) => {
-                console.error('Player error:', event.detail);
-                showError('Failed to load stream');
-            });
-
-            // Video event listeners
-            video.addEventListener('play', () => {
-                isPlaying = true;
-                updatePlayPauseButton();
-            });
-
-            video.addEventListener('pause', () => {
-                isPlaying = false;
-                updatePlayPauseButton();
-            });
-
-            video.addEventListener('volumechange', () => {
-                isMuted = video.muted;
-                updateMuteButton();
-            });
-
-            // Load the stream
-            try {
-                await player.load(PROXY_PATH);
-            } catch (error) {
-                // Ignore error if it's a load interrupted by another load
-                if (error.code != shaka.util.Error.Code.LOAD_INTERRUPTED) {
-                    console.error('Error loading stream:', error);
-                    showError(`Failed to load stream: ${error.message}`);
-                }
-            }
         }
 
         function attemptAutoplay() {
