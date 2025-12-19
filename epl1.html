@@ -389,48 +389,64 @@
                         'fullscreen'
                     ],
                     addBigPlayButton: true,
+                    // FIX: Changed 'caption' to 'captions' to match Shaka's UI element name
                     overflowMenuButtons: [
                         'quality',
                         'language',
-                        'caption'
+                        'captions' 
                     ]
                 });
 
                 // Optimize player configuration for faster initial load
                 player.configure({
                     streaming: {
+                        // Reduced initial buffering to start playback faster
                         bufferingGoal: 10,
+                        // Lower the buffer threshold for quicker startup
                         rebufferingGoal: 2,
+                        // Start at a segment boundary for smoother playback
                         startAtSegmentBoundary: true,
+                        // Optimize for low latency
                         lowLatencyMode: true,
-                        jumpLargeGaps: true,
-                        defaultBandwidthEstimate: 1000000,
-                        fastSwitchEnabled: true,
+                        // Use native HLS on Safari for better performance
                         useNativeHlsOnSafari: true
                     },
                     manifest: {
                         dash: { 
-                            autoCorrectDrift: true,
-                            updatePeriod: 30
-                        },
-                        disableSegmentPrefetch: false
+                            autoCorrectDrift: true
+                        }
                     },
+                    // FIX: Moved invalid/incorrect keys to the correct 'abr' section
                     abr: {
                         enabled: true,
-                        defaultBandwidthEstimate: 500000,
+                        // Start with lower quality for faster startup
+                        defaultBandwidthEstimate: 500000, // 0.5 Mbps
+                        // More aggressive quality switching
+                        fastSwitchEnabled: true,
+                        // Switch quality every second
                         switchInterval: 1,
+                        // Prioritize stability over quality changes
                         bandwidthUpgradeTarget: 0.85,
                         bandwidthDowngradeTarget: 0.95
                     }
                 });
 
-                // Network request filter
+                // This is the key part: intercept ALL network requests
                 player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    // For the manifest request, point it to our proxy
                     if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
                         request.uris = [PROXY_PATH];
-                    } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                    } 
+                    // For ALL other requests (like segments), rewrite them to go through our proxy
+                    else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        // The URI might be relative or absolute. We just need the filename.
                         const uri = request.uris[0];
                         const fileName = uri.substring(uri.lastIndexOf('/') + 1);
+                        
+                        // Log the change for debugging
+                        console.log(`Filtering segment: ${uri} -> ${PROXY_PATH}?segment=${fileName}`);
+                        
+                        // Rewrite the URI to point to our proxy with the filename as a query param
                         request.uris = [`${PROXY_PATH}?segment=${fileName}`];
                     }
                 });
