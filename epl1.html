@@ -1,3 +1,4 @@
+<!-- File: epl1.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,363 +8,159 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <style>
-        * {
+        /* Full-screen layout for TV and Mobile */
+        html, body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
             width: 100vw;
             height: 100vh;
-            background: #000;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #000;
+            overflow: hidden; /* Prevents scrollbars */
         }
 
+        /* Container to center the video */
         .video-container {
             width: 100%;
             height: 100%;
-            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
+        /* Video element to fill the container while maintaining aspect ratio */
         video {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: contain; /* Ensures the video is not stretched or cropped */
+        }
+        
+        /* --- Shaka Player UI Customizations for TV/Mobile --- */
+
+        /* Make the control bar larger and more accessible */
+        .shaka-controls-button-panel {
+            font-size: 24px; /* Larger icons */
+        }
+        
+        /* Increase the size of each button for better touch/remote targets */
+        .shaka-controls-button-panel > button {
+            padding: 12px;
+            margin: 0 8px;
         }
 
-        /* Simple Loading Indicator */
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            text-align: center;
-            z-index: 10;
+        /* Style the bottom controls bar for better visibility */
+        .shaka-bottom-controls {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            padding-bottom: 2em; /* Add space from the edge of the screen */
         }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid #fff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+        /* Ensure the overflow menu is also styled consistently */
+        .shaka-overflow-menu {
+            font-size: 18px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Custom Controls */
-        .controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .video-container:hover .controls,
-        .video-container:focus-within .controls {
-            opacity: 1;
-        }
-
-        .control-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: #fff;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 20px;
-        }
-
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.1);
-        }
-
-        .control-btn:active {
-            transform: scale(0.95);
-        }
-
-        .control-btn.play-pause {
-            background: #e50914;
-            width: 60px;
-            height: 60px;
-            font-size: 24px;
-        }
-
-        /* Autoplay Prompt */
-        .autoplay-prompt {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            z-index: 20;
-            display: none;
-        }
-
-        .autoplay-prompt h3 {
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
-
-        .autoplay-prompt button {
-            background: #e50914;
-            color: #fff;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .autoplay-prompt button:hover {
-            background: #f40612;
-        }
-
-        /* Hide Shaka's default controls */
-        .shaka-bottom-controls,
-        .shaka-top-controls {
+        /* As a fallback, hide any element that might be a seek bar */
+        .shaka-seek-bar-container {
             display: none !important;
         }
     </style>
 </head>
 <body>
-    <div class="video-container" id="video-container">
-        <!-- Loading Indicator -->
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <div>Loading...</div>
-        </div>
-
-        <!-- Autoplay Prompt -->
-        <div class="autoplay-prompt" id="autoplay-prompt">
-            <h3>Click to Play</h3>
-            <p>Your browser requires interaction to start playback with sound.</p>
-            <button id="play-button">Play Now</button>
-        </div>
-
-        <!-- Video Element -->
+    <div class="video-container">
         <div data-shaka-player-container>
             <video id="video" data-shaka-player autoplay></video>
         </div>
-
-        <!-- Custom Controls -->
-        <div class="controls">
-            <button class="control-btn play-pause" id="play-pause-btn">
-                <i class="fas fa-pause" id="play-pause-icon"></i>
-            </button>
-            <button class="control-btn" id="mute-btn">
-                <i class="fas fa-volume-up" id="mute-icon"></i>
-            </button>
-            <button class="control-btn" id="fullscreen-btn">
-                <i class="fas fa-expand" id="fullscreen-icon"></i>
-            </button>
-        </div>
     </div>
 
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <script>
+        // Hardcoded paths for the EPL1 stream
         const PROXY_PATH = '/api/epl1-proxy';
-        let player;
-        let isPlaying = false;
-        let isMuted = false;
 
-     async function initPlayer() {
+        let player;
+
+        async function initApp() {
             shaka.polyfill.installAll();
 
-            if (!shaka.Player.isBrowserSupported()) {
-                showError('Browser not supported');
-                return;
-            }
-
-            // This event fires when the UI (and the player) are ready
-            document.addEventListener('shaka-ui-loaded', async (event) => {
+            if (shaka.Player.isBrowserSupported()) {
                 const video = document.getElementById('video');
-                const ui = video['ui'];
+                player = new shaka.Player(video);
                 
-                // Get the player instance created by the UI
-                player = ui.getControls().getPlayer();
+                // Configure the Shaka Player UI
+                const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
-                // Configure the player
+                // Configure a minimal UI for TV/Mobile
+                ui.configure({
+                    // Define the minimal controls to show on the main bar.
+                    // 'volume' is removed, 'overflow_menu' is added.
+                    controlPanelElements: [
+                        'play_pause',
+                        'overflow_menu',
+                        'fullscreen'
+                    ],
+                    // Add a large, centered play button for better UX
+                    addBigPlayButton: true,
+                    // Configure the overflow menu (three dots) for essential settings
+                    overflowMenuButtons: [
+                        'quality',
+                        'language',
+                        'caption'
+                    ]
+                });
+
                 player.configure({
                     streaming: {
-                        bufferingGoal: 5,
-                        rebufferingGoal: 1,
-                        startAtSegmentBoundary: true,
-                        lowLatencyMode: true,
-                        useNativeHlsOnSafari: true
+                        bufferingGoal: 30,
                     },
-                    abr: {
-                        enabled: true,
-                        defaultBandwidthEstimate: 500000
+                    manifest: {
+                        dash: { autoCorrectDrift: true }
                     }
                 });
 
-                // Network request filter
+                // This is the key part: intercept ALL network requests
                 player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    // For the manifest request, point it to our proxy
                     if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
                         request.uris = [PROXY_PATH];
-                    } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                    } 
+                    // For ALL other requests (like segments), rewrite them to go through our proxy
+                    else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        // The URI might be relative or absolute. We just need the filename.
                         const uri = request.uris[0];
                         const fileName = uri.substring(uri.lastIndexOf('/') + 1);
+                        
+                        // Log the change for debugging
+                        console.log(`Filtering segment: ${uri} -> ${PROXY_PATH}?segment=${fileName}`);
+                        
+                        // Rewrite the URI to point to our proxy with the filename as a query param
                         request.uris = [`${PROXY_PATH}?segment=${fileName}`];
                     }
                 });
 
-                // Event listeners
-                player.addEventListener('loading', () => {
-                    document.getElementById('loading').style.display = 'block';
-                });
-
-                player.addEventListener('loaded', () => {
-                    document.getElementById('loading').style.display = 'none';
-                    attemptAutoplay();
-                });
-
-                player.addEventListener('error', (event) => {
-                    console.error('Player error:', event.detail);
-                    showError('Failed to load stream');
-                });
-
-                // Video element listeners (Standard HTML5 events)
-                video.addEventListener('play', () => {
-                    isPlaying = true;
-                    updatePlayPauseButton();
-                });
-
-                video.addEventListener('pause', () => {
-                    isPlaying = false;
-                    updatePlayPauseButton();
-                });
-
-                video.addEventListener('volumechange', () => {
-                    isMuted = video.muted;
-                    updateMuteButton();
-                });
-
-                // Load the stream
+                // Load the stream using the proxy path
                 try {
                     await player.load(PROXY_PATH);
+                    console.log('EPL1 stream loaded successfully!');
                 } catch (error) {
-                    if (error.code != shaka.util.Error.Code.LOAD_INTERRUPTED) {
-                        console.error('Error loading stream:', error);
-                        showError(`Failed to load stream: ${error.message}`);
-                    }
+                    console.error('Error loading stream:', error);
+                    document.querySelector('.video-container').innerHTML = `
+                        <div style="color: white; text-align: center;">
+                            <h2>Error Loading Stream</h2>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
                 }
-            });
-        }
 
-        function attemptAutoplay() {
-            const video = document.getElementById('video');
-            const autoplayPrompt = document.getElementById('autoplay-prompt');
-            
-            // Try to autoplay with sound
-            video.play().then(() => {
-                isPlaying = true;
-                updatePlayPauseButton();
-            }).catch(error => {
-                console.log('Autoplay blocked:', error);
-                // Show prompt for user interaction
-                autoplayPrompt.style.display = 'block';
-            });
-        }
-
-        function updatePlayPauseButton() {
-            const icon = document.getElementById('play-pause-icon');
-            icon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
-        }
-
-        function updateMuteButton() {
-            const icon = document.getElementById('mute-icon');
-            icon.className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
-        }
-
-        function updateFullscreenButton() {
-            const icon = document.getElementById('fullscreen-icon');
-            icon.className = document.fullscreenElement ? 'fas fa-compress' : 'fas fa-expand';
-        }
-
-        function showError(message) {
-            const loading = document.getElementById('loading');
-            loading.innerHTML = `<div style="color: #ff4444;">Error: ${message}</div>`;
-        }
-
-        // Control event listeners
-        document.getElementById('play-pause-btn').addEventListener('click', () => {
-            const video = document.getElementById('video');
-            if (isPlaying) {
-                video.pause();
             } else {
-                video.play();
+                console.error('Browser not supported!');
+                document.querySelector('.video-container').innerHTML = `
+                    <div style="color: white; text-align: center;">
+                        <h2>Error</h2>
+                        <p>This browser is not supported for streaming.</p>
+                    </div>
+                `;
             }
-        });
+        }
 
-        document.getElementById('mute-btn').addEventListener('click', () => {
-            const video = document.getElementById('video');
-            video.muted = !video.muted;
-        });
-
-        document.getElementById('fullscreen-btn').addEventListener('click', () => {
-            const container = document.getElementById('video-container');
-            if (!document.fullscreenElement) {
-                container.requestFullscreen().catch(err => {
-                    console.error('Fullscreen error:', err);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        });
-
-        // Autoplay prompt button
-        document.getElementById('play-button').addEventListener('click', () => {
-            const video = document.getElementById('video');
-            const autoplayPrompt = document.getElementById('autoplay-prompt');
-            
-            video.play().then(() => {
-                isPlaying = true;
-                updatePlayPauseButton();
-                autoplayPrompt.style.display = 'none';
-            }).catch(error => {
-                console.error('Play failed:', error);
-            });
-        });
-
-        // Fullscreen change listener
-        document.addEventListener('fullscreenchange', updateFullscreenButton);
-
-        // Initialize player when DOM is ready
-        document.addEventListener('DOMContentLoaded', initPlayer);
+        document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
