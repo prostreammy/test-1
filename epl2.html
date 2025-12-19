@@ -1,0 +1,166 @@
+<!-- File: epl2.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPL2 TV Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
+    <style>
+        /* Full-screen layout for TV and Mobile */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            overflow: hidden; /* Prevents scrollbars */
+        }
+
+        /* Container to center the video */
+        .video-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Video element to fill the container while maintaining aspect ratio */
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensures the video is not stretched or cropped */
+        }
+        
+        /* --- Shaka Player UI Customizations for TV/Mobile --- */
+
+        /* Make the control bar larger and more accessible */
+        .shaka-controls-button-panel {
+            font-size: 24px; /* Larger icons */
+        }
+        
+        /* Increase the size of each button for better touch/remote targets */
+        .shaka-controls-button-panel > button {
+            padding: 12px;
+            margin: 0 8px;
+        }
+
+        /* Style the bottom controls bar for better visibility */
+        .shaka-bottom-controls {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            padding-bottom: 2em; /* Add space from the edge of the screen */
+        }
+
+        /* Ensure the overflow menu is also styled consistently */
+        .shaka-overflow-menu {
+            font-size: 18px;
+        }
+
+        /* As a fallback, hide any element that might be a seek bar */
+        .shaka-seek-bar-container {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div data-shaka-player-container>
+            <video id="video" data-shaka-player autoplay></video>
+        </div>
+    </div>
+
+    <script>
+        // Hardcoded paths for the EPL2 stream
+        const PROXY_PATH = '/api/epl2-proxy';
+
+        let player;
+
+        async function initApp() {
+            shaka.polyfill.installAll();
+
+            if (shaka.Player.isBrowserSupported()) {
+                const video = document.getElementById('video');
+                player = new shaka.Player(video);
+                
+                // Configure the Shaka Player UI
+                const ui = new shaka.ui.Overlay(player, video.parentElement, video);
+
+                // Configure a minimal UI for TV/Mobile
+                ui.configure({
+                    // Define the minimal controls to show on the main bar.
+                    // 'volume' is removed, 'overflow_menu' is added.
+                    controlPanelElements: [
+                        'play_pause',
+                        'overflow_menu',
+                        'fullscreen'
+                    ],
+                    // Add a large, centered play button for better UX
+                    addBigPlayButton: true,
+                    // Configure the overflow menu (three dots) for essential settings
+                    overflowMenuButtons: [
+                        'quality',
+                        'language',
+                        'caption'
+                    ]
+                });
+
+                player.configure({
+                    streaming: {
+                        bufferingGoal: 30,
+                    },
+                    manifest: {
+                        dash: { autoCorrectDrift: true }
+                    }
+                });
+
+                // This is the key part: intercept ALL network requests
+                player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    // For the manifest request, point it to our proxy
+                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                        request.uris = [PROXY_PATH];
+                    } 
+                    // For ALL other requests (like segments), rewrite them to go through our proxy
+                    else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        // The URI might be relative or absolute. We just need the filename.
+                        const uri = request.uris[0];
+                        const fileName = uri.substring(uri.lastIndexOf('/') + 1);
+                        
+                        // Log the change for debugging
+                        console.log(`Filtering segment: ${uri} -> ${PROXY_PATH}?segment=${fileName}`);
+                        
+                        // Rewrite the URI to point to our proxy with the filename as a query param
+                        request.uris = [`${PROXY_PATH}?segment=${fileName}`];
+                    }
+                });
+
+                // Load the stream using the proxy path
+                try {
+                    await player.load(PROXY_PATH);
+                    console.log('EPL2 stream loaded successfully!');
+                } catch (error) {
+                    console.error('Error loading stream:', error);
+                    document.querySelector('.video-container').innerHTML = `
+                        <div style="color: white; text-align: center;">
+                            <h2>Error Loading Stream</h2>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
+
+            } else {
+                console.error('Browser not supported!');
+                document.querySelector('.video-container').innerHTML = `
+                    <div style="color: white; text-align: center;">
+                        <h2>Error</h2>
+                        <p>This browser is not supported for streaming.</p>
+                    </div>
+                `;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
