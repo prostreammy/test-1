@@ -199,7 +199,7 @@
         let isPlaying = false;
         let isMuted = false;
 
-        async function initPlayer() {
+     async function initPlayer() {
             shaka.polyfill.installAll();
 
             if (!shaka.Player.isBrowserSupported()) {
@@ -208,9 +208,14 @@
             }
 
             const video = document.getElementById('video');
-            player = new shaka.Player(video);
+            const videoContainer = document.getElementById('video-container');
 
-            // Simplified configuration with only valid keys
+            // IMPORTANT: Get the player and UI overlay from the data attributes
+            // instead of creating a "new shaka.Player"
+            const ui = video['ui'];
+            player = ui.getControls().getPlayer();
+
+            // Simplified configuration
             player.configure({
                 streaming: {
                     bufferingGoal: 5,
@@ -222,7 +227,6 @@
                 abr: {
                     enabled: true,
                     defaultBandwidthEstimate: 500000
-                    // Removed fastSwitchEnabled as it's not a valid key in this version
                 }
             });
 
@@ -247,8 +251,8 @@
                 attemptAutoplay();
             });
 
-            player.addEventListener('error', (error) => {
-                console.error('Player error:', error);
+            player.addEventListener('error', (event) => {
+                console.error('Player error:', event.detail);
                 showError('Failed to load stream');
             });
 
@@ -268,14 +272,15 @@
                 updateMuteButton();
             });
 
-            // Load the stream with better error handling
+            // Load the stream
             try {
-                console.log('Loading stream from:', PROXY_PATH);
                 await player.load(PROXY_PATH);
-                console.log('Stream loaded successfully');
             } catch (error) {
-                console.error('Error loading stream:', error);
-                showError(`Failed to load stream: ${error.message}`);
+                // Ignore error if it's a load interrupted by another load
+                if (error.code != shaka.util.Error.Code.LOAD_INTERRUPTED) {
+                    console.error('Error loading stream:', error);
+                    showError(`Failed to load stream: ${error.message}`);
+                }
             }
         }
 
